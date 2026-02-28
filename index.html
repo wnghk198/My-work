@@ -1,0 +1,3315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>근무 스케줄러 단일 파일</title>
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="근무 스케줄러" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="근무 스케줄러" />
+  <meta name="format-detection" content="telephone=no" />
+  <style>
+:root {
+  --bg: #f6f7fb;
+  --card: #fff;
+  --line: #e2e6ef;
+  --text: #1f2430;
+  --muted: #6b7280;
+  --blue: #2563eb;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+body.is-android {
+  font-family: Roboto, 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+body, .table-wrap, .sheet-wrap, .calendar-scroll, .week-calendar-scroll {
+  overscroll-behavior: contain;
+}
+
+.app { max-width: 1200px; margin: 0 auto; padding: 12px 10px calc(24px + env(safe-area-inset-bottom)); }
+header { margin-bottom: 10px; }
+h1 { margin: 0 0 4px; font-size: 22px; line-height: 1.25; }
+header p { margin: 0; color: var(--muted); font-size: 13px; }
+.notice-inline{margin-top:6px;color:#92400e;font-size:12px;font-weight:600;}
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-top: 10px; }
+.card h2 { margin: 0 0 10px; font-size: 17px; }
+.mt8 { margin-top: 8px; }
+
+.form-grid, .action-grid { display: grid; gap: 8px; }
+.form-grid { grid-template-columns: 1.2fr 1fr 1fr auto; }
+.action-grid { grid-template-columns: 1fr 1fr auto; }
+.action-grid .wide { min-width: 120px; }
+
+input, select, button {
+  min-height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 0 12px;
+  font-size: 14px;
+  touch-action: manipulation;
+}
+input[type="date"], input[type="time"], select {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+input, select { background: #fff; width: 100%; }
+button {
+  background: var(--blue);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+}
+button.secondary { background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
+button:active { transform: translateY(1px); }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+
+.worker-list {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+}
+.worker-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  background: #fafbff;
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  gap:8px;
+}
+.worker-item .meta { font-size: 12px; color: var(--muted); }
+.worker-item button { min-height: 34px; padding: 0 10px; }
+.tag { display: inline-block; padding: 2px 6px; border-radius: 999px; font-size: 11px; background: #e5edff; color: #1d4ed8; margin-left: 4px; }
+
+.result-head { display:flex; justify-content: space-between; align-items:center; gap:8px; }
+.result-head button { min-height: 36px; }
+.summary { margin: 8px 0 10px; font-size: 13px; color: var(--text); line-height: 1.45; }
+.summary .warn { color: #b45309; margin-top: 4px; }
+.summary .counts { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.summary .pill { background:#f3f4f6; border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-size:12px; }
+
+.mobile-result { display: none; }
+.mobile-worker-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #fcfcff;
+}
+.mobile-worker-card .top {
+  display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;
+}
+.mobile-worker-card .name { font-weight: 700; }
+.mobile-worker-card .meta { color: var(--muted); font-size: 12px; }
+.mobile-timeline {
+  display:grid;
+  gap:6px;
+  max-height: 280px;
+  overflow:auto;
+  border-top:1px dashed var(--line);
+  padding-top:8px;
+}
+.mobile-row {
+  display:grid;
+  grid-template-columns: 58px 1fr;
+  gap:6px;
+  align-items:start;
+  font-size:12px;
+}
+.mobile-row .t { color: var(--muted); font-weight: 700; }
+.mobile-row .v {
+  border-radius: 8px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  line-height: 1.25;
+}
+.mobile-row .v.cell-work { background: #eef4ff; border-color: #bfdbfe; box-shadow: inset 3px 0 0 #2563eb; }
+.mobile-row .v.cell-break { background: #fff7ed; border-color: #fdba74; box-shadow: inset 3px 0 0 #ea580c; }
+.mobile-row .v.cell-meal { background: #ecfdf5; border-color: #86efac; box-shadow: inset 3px 0 0 #16a34a; }
+.mobile-row .v.cell-meeting { background: #eef2ff; border-color: #c7d2fe; box-shadow: inset 3px 0 0 #4f46e5; }
+.mobile-row .v.cell-cart { background: #fff1f2; border-color: #fda4af; box-shadow: inset 3px 0 0 #e11d48; }
+.mobile-row .v.cell-assist { background: #f5f3ff; border-color: #c4b5fd; box-shadow: inset 3px 0 0 #7c3aed; }
+.mobile-row .v.cell-f3cart { background: #f3e8ff; border-color: #d8b4fe; box-shadow: inset 3px 0 0 #7c3aed; }
+.mobile-row .v.cell-empty { color: #94a3b8; }
+
+.table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 10px; background:#fff; }
+.scroll-hint { padding: 8px 10px 0; position: sticky; left: 0; }
+table { width: 100%; border-collapse: collapse; min-width: 980px; }
+th, td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 6px 8px; font-size: 12px; vertical-align: top; }
+th:last-child, td:last-child { border-right: none; }
+thead th { position: sticky; top: 0; background: #f2f5fb; z-index: 1; }
+.time-col { white-space: nowrap; font-weight: 700; }
+.cell-work { font-weight: 600; background: #f8fbff; }
+.cell-break { background: #fff7ed; }
+.cell-meal { background: #ecfdf5; }
+.cell-meeting { background: #eef2ff; }
+.cell-empty { color: #cbd5e1; }
+.cell-cart { background:#fff1f2; }
+.cell-assist { background:#f5f3ff; }
+.cell-f3cart { background:#f3e8ff; }
+ul { margin: 0; padding-left: 18px; }
+
+@media (max-width: 900px) {
+  .form-grid { grid-template-columns: 1fr 1fr; }
+  .form-grid > *:nth-child(1) { grid-column: 1 / -1; }
+  .form-grid > *:nth-child(4) { grid-column: 1 / -1; }
+  .action-grid { grid-template-columns: 1fr 1fr; }
+  .action-grid .wide { grid-column: 1 / -1; width:100%; }
+}
+
+@media (max-width: 640px) {
+  .app { padding: 8px 8px calc(18px + env(safe-area-inset-bottom)); }
+  h1 { font-size: 18px; }
+  .card h2 { font-size: 15px; }
+  .card { padding: 10px; border-radius: 12px; }
+  input, select, button { min-height: 46px; font-size: 16px; }
+  .worker-list { grid-template-columns: 1fr; }
+  .worker-item { align-items: stretch; }
+  .worker-item button { align-self: center; }
+  #desktopTableWrap { display: none; }
+  .mobile-result { display: block; }
+  .table-wrap, .sheet-wrap, .calendar-scroll, .week-calendar-scroll { scroll-padding-left: 8px; }
+}
+
+
+
+.error-box {
+  background:#fef2f2;
+  color:#991b1b;
+  border:1px solid #fecaca;
+  border-radius:10px;
+  padding:8px 10px;
+  margin-bottom:8px;
+  font-size:13px;
+}
+.android-tip {
+  display:none;
+  background:#eff6ff;
+  color:#1d4ed8;
+  border:1px solid #bfdbfe;
+  border-radius:10px;
+  padding:8px 10px;
+  margin-bottom:8px;
+  font-size:12px;
+}
+body.is-android .android-tip { display:block; }
+
+.mobile-toolbar { display:none; margin: 2px 0 8px; }
+.mobile-worker-card summary { list-style:none; cursor:pointer; }
+.mobile-worker-card summary::-webkit-details-marker { display:none; }
+.mobile-worker-card .summary-tags { display:flex; align-items:center; gap:6px; }
+.mobile-worker-card .chev { color: var(--muted); font-size: 12px; }
+.mobile-worker-card[open] .chev { transform: rotate(180deg); display:inline-block; }
+.mobile-warns { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.mobile-warns span { font-size:11px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:999px; padding:2px 6px; }
+.slot-health { margin-top:8px; }
+.slot-grid { display:grid; grid-template-columns: repeat(4, minmax(80px,1fr)); gap:6px; margin-top:6px; }
+.slot-item { border:1px solid var(--line); border-radius:8px; padding:6px; font-size:11px; background:#fafafa; }
+.slot-item .time { font-weight:700; margin-bottom:2px; }
+.slot-item.bad { border-color:#fdba74; background:#fff7ed; }
+button:disabled { opacity:0.55; cursor:not-allowed; }
+
+@media (max-width: 640px) {
+  .mobile-toolbar { display:block; }
+  .result-head { align-items:stretch; }
+  .result-head h2 { margin-right:auto; }
+  .result-head button { min-height:44px; padding:0 14px; }
+  .summary { font-size:12px; }
+  .slot-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .mobile-timeline { max-height: 360px; }
+  .mobile-row { grid-template-columns: 52px 1fr; }
+}
+
+
+.mobile-row.mobile-block {
+  grid-template-columns: 98px 1fr;
+}
+.mobile-row.mobile-block .t {
+  font-size: 11px;
+  line-height: 1.2;
+  padding-top: 2px;
+}
+.mobile-row.mobile-block .v {
+  padding: 6px 8px;
+}
+.mobile-row.mobile-block .line1 {
+  font-weight: 700;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+}
+.mobile-row.mobile-block .line2 {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.tag-inline {
+  display:inline-block;
+  font-size:10px;
+  padding:1px 5px;
+  border-radius:999px;
+  background:#eef2ff;
+  color:#3730a3;
+  border:1px solid #c7d2fe;
+  font-weight:600;
+}
+#resultTable td.cell-cont {
+  color: transparent;
+}
+@media (max-width: 640px) {
+  .mobile-row.mobile-block { grid-template-columns: 92px 1fr; }
+  .mobile-row.mobile-block .t { font-size: 10px; }
+}
+
+
+.legend-row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:6px 0 8px;
+}
+.legend-item { display:inline-flex; }
+.type-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  border-radius:999px;
+  padding:2px 8px;
+  font-size:11px;
+  font-weight:700;
+  border:1px solid transparent;
+  line-height:1.2;
+}
+.badge-work { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+.badge-meal { background:#ecfdf5; color:#166534; border-color:#86efac; }
+.badge-break { background:#fff7ed; color:#9a3412; border-color:#fdba74; }
+.badge-meeting { background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
+.badge-default { background:#f3f4f6; color:#374151; border-color:#d1d5db; }
+.badge-cart { background:#fff1f2; color:#be123c; border-color:#fda4af; }
+.badge-f3cart { background:#f3e8ff; color:#6b21a8; border-color:#d8b4fe; }
+.badge-assist { background:#f5f3ff; color:#6d28d9; border-color:#c4b5fd; }
+.cell-wrap {
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.cell-emoji { font-size: 12px; }
+.cell-label { display:inline-block; }
+.line0 { margin-bottom: 4px; }
+.mobile-row.mobile-block .line0 .type-badge { font-size:10px; padding:2px 6px; }
+.mobile-row.mobile-block .line1 { font-weight:700; }
+.mobile-row.mobile-block .line1 .tag-inline { margin-left: 0; }
+#resultTable td.cell-work:not(.cell-cont) { border-left: 3px solid #2563eb; }
+#resultTable td.cell-meal:not(.cell-cont) { border-left: 3px solid #16a34a; }
+#resultTable td.cell-break:not(.cell-cont) { border-left: 3px solid #ea580c; }
+#resultTable td.cell-meeting:not(.cell-cont) { border-left: 3px solid #4f46e5; }
+#resultTable td.cell-cart:not(.cell-cont) { border-left: 3px solid #e11d48; background:#fff1f2; }
+#resultTable td.cell-assist:not(.cell-cont) { border-left: 3px solid #7c3aed; background:#f5f3ff; }
+#resultTable td.cell-f3cart:not(.cell-cont) { border-left: 3px solid #7c3aed; background:#f3e8ff; }
+@media (max-width: 640px) {
+  .legend-row { gap:4px; }
+  .type-badge { font-size:10px; padding:2px 6px; }
+}
+
+
+/* v16 readability simplification */
+.simple-result { margin: 8px 0 10px; }
+.simple-section { border:1px solid var(--line); border-radius:12px; background:#fff; padding:10px; margin-bottom:10px; }
+.simple-title { font-weight:700; font-size:14px; }
+.simple-sub { font-size:12px; margin-top:2px; margin-bottom:8px; }
+.ops-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:8px; }
+.ops-block { border:1px solid var(--line); border-radius:10px; background:#f9fafb; padding:8px; }
+.ops-block.bad { border-color:#fdba74; background:#fff7ed; }
+.ops-time { font-weight:700; font-size:12px; margin-bottom:4px; }
+.ops-lines { display:flex; flex-wrap:wrap; gap:4px 6px; font-size:11px; color:#374151; }
+.ops-lines span { background:#fff; border:1px solid var(--line); border-radius:999px; padding:2px 6px; }
+.simple-worker-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; }
+.simple-worker-card { border:1px solid var(--line); border-radius:12px; background:#fcfcff; padding:10px; }
+.simple-head { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px; }
+.simple-head .name { font-weight:700; }
+.mini-tags { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px; }
+.mini-pill, .mini-warn { border-radius:999px; font-size:11px; padding:2px 6px; border:1px solid var(--line); background:#f3f4f6; white-space:nowrap; }
+.mini-warn { background:#fff7ed; border-color:#fdba74; color:#92400e; }
+.chip-list { display:grid; gap:6px; }
+.chip { border:1px solid var(--line); border-radius:10px; padding:6px; background:#fff; }
+.chip.cell-work { background:#eef4ff; border-color:#bfdbfe; }
+.chip.cell-meal { background:#ecfdf5; border-color:#86efac; }
+.chip.cell-break { background:#fff7ed; border-color:#fdba74; }
+.chip.cell-meeting { background:#eef2ff; border-color:#c7d2fe; }
+.chip.cell-cart { background:#fff1f2; border-color:#fda4af; box-shadow: inset 3px 0 0 #e11d48; }
+.chip.cell-assist { background:#f5f3ff; border-color:#c4b5fd; box-shadow: inset 3px 0 0 #7c3aed; }
+.chip.cell-f3cart { background:#f3e8ff; border-color:#d8b4fe; box-shadow: inset 3px 0 0 #7c3aed; }
+.chip-top { display:flex; justify-content:space-between; align-items:center; gap:6px; }
+.chip-time { font-size:11px; color:#6b7280; font-weight:600; }
+.chip-main { margin-top:4px; font-weight:700; font-size:13px; }
+.chip-sub { margin-top:2px; color:#6b7280; font-size:11px; }
+.fold-panel { border:1px solid var(--line); border-radius:10px; background:#fff; margin-top:8px; }
+.fold-panel > summary { cursor:pointer; list-style:none; padding:10px; font-weight:700; font-size:13px; }
+.fold-panel > summary::-webkit-details-marker { display:none; }
+.fold-panel.inline-fold { margin-top:8px; }
+.fold-panel.inline-fold > summary { padding:8px 10px; font-size:12px; }
+.desktop-detail-panel .table-wrap { margin:0 10px 10px; }
+.mobile-detail-panel { display:none; }
+.inline-fold .slot-health { margin-top:0; padding:0 10px 10px; }
+
+@media (max-width: 900px) {
+  .simple-worker-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .ops-grid { grid-template-columns: 1fr; }
+  .simple-section { padding:8px; }
+  .simple-title { font-size:13px; }
+  .chip-main { font-size:12px; }
+  .chip-top { align-items:flex-start; }
+  .chip-time { display:block; }
+  .desktop-detail-panel { display:none; }
+  .mobile-detail-panel { display:block; }
+}
+
+
+.fourweek-toolbar { display:grid; grid-template-columns: 1fr auto auto; gap:8px; align-items:center; }
+.fourweek-note { margin-top:6px; }
+.fourweek-wrap { display:grid; gap:10px; }
+.week-card { border:1px solid var(--line); border-radius:12px; background:#fafbff; overflow:hidden; }
+.week-head { padding:10px 12px; font-weight:800; border-bottom:1px solid var(--line); background:#f8fafc; }
+.week-table { width:100%; border-collapse:collapse; font-size:13px; }
+.week-table th, .week-table td { padding:8px 6px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+.week-table th { background:#f8fafc; color:var(--muted); font-size:12px; }
+.week-table tr:last-child td { border-bottom:none; }
+.slot-badges { display:flex; flex-wrap:wrap; gap:4px; }
+.slot-badges .slot { padding:3px 7px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:11px; font-weight:700; }
+.week-mobile { display:none; }
+@media (max-width: 720px) {
+  .fourweek-toolbar { grid-template-columns: 1fr 1fr; }
+  .fourweek-toolbar .wide-span { grid-column: 1 / -1; }
+  .week-desktop { display:none; }
+  .week-mobile { display:block; }
+  .week-row-card { padding:10px 12px; border-top:1px solid var(--line); }
+  .week-row-card:first-child { border-top:none; }
+  .week-row-card .top { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+  .week-row-card .date { font-weight:800; }
+  .week-row-card .meta { margin-top:4px; color:var(--muted); font-size:12px; }
+}
+
+.week-calendar { border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#fff; margin-bottom:10px; }
+.week-calendar-head { display:grid; grid-template-columns:repeat(7,minmax(150px,1fr)); background:#f8fafc; border-bottom:1px solid var(--line); min-width:1050px; }
+.week-day-head { padding:10px 8px; border-right:1px solid var(--line); }
+.week-day-head:last-child { border-right:none; }
+.week-day-head .dow { font-size:12px; color:var(--muted); font-weight:700; }
+.week-day-head .date { margin-top:3px; font-size:13px; font-weight:800; }
+.week-calendar-body { display:grid; grid-template-columns:repeat(7,minmax(150px,1fr)); min-width:1050px; }
+.week-day-cell { min-height:250px; padding:8px; border-right:1px solid var(--line); background:#fff; }
+.week-day-cell:last-child { border-right:none; }
+.day-total { display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:999px; background:#eef2ff; color:#4338ca; font-size:11px; font-weight:800; margin-bottom:8px; }
+.day-event-stack { display:grid; gap:8px; }
+.day-event { border:1px solid var(--line); border-radius:12px; padding:8px; background:#fafbff; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+.day-event.open { background:#eff6ff; border-color:#bfdbfe; }
+.day-event.middle { background:#fefce8; border-color:#fde68a; }
+.day-event.close { background:#ecfdf5; border-color:#86efac; }
+.day-event .t1 { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; font-size:12px; font-weight:800; }
+.day-event .t1 .time { color:#1d4ed8; }
+.day-event.middle .t1 .time { color:#a16207; }
+.day-event.close .t1 .time { color:#15803d; }
+.day-event .t2 { margin-top:4px; font-size:12px; }
+.day-event .t3 { margin-top:6px; font-size:11px; color:var(--muted); line-height:1.35; }
+.day-slots { margin-top:6px; display:flex; flex-wrap:wrap; gap:4px; }
+.day-slots .slot { font-size:10px; padding:3px 6px; }
+.week-calendar-scroll { overflow:auto; -webkit-overflow-scrolling:touch; }
+.week-calendar-help { margin-top:8px; font-size:12px; color:var(--muted); }
+.week-list-toggle { margin-top:10px; }
+.week-list-toggle summary { cursor:pointer; font-weight:700; }
+@media (max-width: 760px) {
+  .week-calendar-head { min-width:910px; grid-template-columns:repeat(7,minmax(130px,1fr)); }
+  .week-calendar-body { min-width:910px; grid-template-columns:repeat(7,minmax(130px,1fr)); }
+  .week-day-cell { min-height:220px; padding:7px; }
+  .day-event { padding:7px; border-radius:10px; }
+}
+
+  
+
+
+.day-detail-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:10px; margin-top:10px; }
+.day-detail-card { border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden; }
+.day-detail-card summary { cursor:pointer; list-style:none; padding:10px 12px; font-weight:800; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.day-detail-card summary::-webkit-details-marker { display:none; }
+.day-detail-card[open] summary { border-bottom:1px solid var(--line); background:#f8fafc; }
+.day-detail-card .sum-right { font-size:12px; color:var(--muted); font-weight:700; }
+.day-detail-body { padding:10px; display:grid; gap:8px; }
+.day-worker-row { border:1px solid var(--line); border-radius:10px; background:#fafbff; padding:8px; }
+.day-worker-head { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+.day-worker-head .left .name { font-weight:800; font-size:13px; }
+.day-worker-head .left .meta { margin-top:3px; font-size:11px; color:var(--muted); }
+.day-worker-head .right { text-align:right; }
+.day-worker-head .right .group { font-size:11px; color:#1d4ed8; font-weight:800; }
+.day-worker-head .right .warn { margin-top:3px; font-size:10px; color:#b45309; }
+.day-worker-blocks { margin-top:8px; display:grid; gap:6px; }
+.day-worker-block { border:1px solid var(--line); border-radius:10px; background:#fff; padding:7px 8px; }
+.day-worker-block .top { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+.day-worker-block .time { font-size:11px; color:var(--muted); white-space:nowrap; }
+.day-worker-block .main { margin-top:5px; font-size:12px; font-weight:700; }
+.day-worker-block .sub { margin-top:3px; font-size:11px; color:var(--muted); }
+.day-detail-help { margin-top:8px; font-size:12px; color:var(--muted); }
+@media (max-width: 720px) {
+  .day-detail-grid { grid-template-columns:1fr; }
+  .day-detail-card summary { padding:9px 10px; }
+  .day-detail-body { padding:8px; }
+}
+
+/* v24 calendar view */
+
+.calendar-result { margin: 8px 0 10px; }
+.calendar-card { border:1px solid var(--line); border-radius:12px; background:#fff; padding:10px; margin-bottom:10px; }
+.calendar-title { font-weight:700; font-size:14px; }
+.calendar-sub { font-size:12px; color:var(--muted); margin-top:2px; margin-bottom:8px; }
+.calendar-shell { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#f8fafc; }
+.calendar-top { display:flex; border-bottom:1px solid var(--line); background:#fff; position:sticky; top:0; z-index:2; }
+.calendar-time-head { width:64px; min-width:64px; padding:10px 8px; font-size:12px; font-weight:800; color:var(--muted); border-right:1px solid var(--line); }
+.calendar-worker-heads { display:flex; min-width:max-content; }
+.calendar-worker-head { width:144px; min-width:144px; padding:10px 8px; border-right:1px solid var(--line); }
+.calendar-worker-head:last-child { border-right:none; }
+.calendar-worker-head .name { font-weight:800; font-size:13px; }
+.calendar-worker-head .meta { margin-top:3px; font-size:11px; color:var(--muted); }
+.calendar-scroll { overflow:auto; -webkit-overflow-scrolling:touch; max-height:72vh; background:#fff; }
+.calendar-body { display:flex; min-width:max-content; }
+.calendar-time-axis { width:64px; min-width:64px; position:sticky; left:0; z-index:1; background:#fff; border-right:1px solid var(--line); }
+.calendar-time-label { position:absolute; left:0; width:100%; padding:0 6px; font-size:11px; color:var(--muted); transform:translateY(-50%); }
+.calendar-time-label span { background:#fff; padding-right:4px; }
+.calendar-lanes { display:flex; min-width:max-content; background:#fff; }
+.calendar-lane { width:144px; min-width:144px; position:relative; border-right:1px solid var(--line); background-image: linear-gradient(to bottom, transparent calc(100% - 1px), #eef2f7 1px); background-size:100% 52px; }
+.calendar-lane:last-child { border-right:none; }
+.calendar-gridline { position:absolute; left:0; right:0; height:1px; background:#e5e7eb; }
+.calendar-block { position:absolute; left:6px; right:6px; border-radius:10px; padding:6px 7px; overflow:hidden; border:1px solid transparent; box-shadow:0 1px 2px rgba(15,23,42,.06); }
+.calendar-block .b1 { display:flex; align-items:center; gap:5px; font-weight:800; font-size:12px; line-height:1.2; }
+.calendar-block .b2 { margin-top:3px; font-size:11px; color:#475569; line-height:1.2; }
+.calendar-block .b3 { margin-top:3px; font-size:10px; color:#64748b; line-height:1.2; }
+.calendar-block.cell-work { background:#eef4ff; border-color:#bfdbfe; }
+.calendar-block.cell-meal { background:#ecfdf5; border-color:#86efac; }
+.calendar-block.cell-break { background:#fff7ed; border-color:#fdba74; }
+.calendar-block.cell-meeting { background:#eef2ff; border-color:#c7d2fe; }
+.calendar-block.cell-empty { background:#f8fafc; border-color:#e5e7eb; }
+.calendar-block.cell-cart { background:#fff1f2; border-color:#fda4af; box-shadow:0 1px 2px rgba(15,23,42,.06), inset 4px 0 0 #e11d48; }
+.calendar-block.cell-assist { background:#f5f3ff; border-color:#c4b5fd; box-shadow:0 1px 2px rgba(15,23,42,.06), inset 4px 0 0 #7c3aed; }
+.calendar-block.cell-f3cart { background:#f3e8ff; border-color:#d8b4fe; box-shadow:0 1px 2px rgba(15,23,42,.06), inset 4px 0 0 #7c3aed; }
+.calendar-help { margin-top:8px; font-size:12px; color:var(--muted); }
+
+@media (max-width: 640px) {
+  .calendar-card { padding:8px; }
+  .calendar-title { font-size:13px; }
+  .calendar-time-head, .calendar-time-axis { width:56px; min-width:56px; }
+  .calendar-worker-head, .calendar-lane { width:118px; min-width:118px; }
+  .calendar-block { left:4px; right:4px; padding:5px 6px; }
+  .calendar-block .b1 { font-size:11px; }
+  .calendar-block .b2, .calendar-block .b3 { font-size:10px; }
+  .calendar-scroll { max-height:68vh; }
+}
+
+  
+.middle-config-grid { display:grid; gap:8px; }
+.middle-config-row { border:1px solid var(--line); border-radius:12px; padding:10px; background:#fafbff; }
+.middle-config-head { display:grid; grid-template-columns: 1fr 110px; gap:10px; align-items:end; }
+.middle-config-row .day { font-weight:800; font-size:14px; }
+.middle-config-row .field label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+.middle-time-list { display:grid; gap:6px; margin-top:8px; }
+.middle-time-item { display:grid; grid-template-columns: 72px 1fr; gap:8px; align-items:center; }
+.middle-time-item .slot-label { font-size:12px; color:var(--muted); font-weight:700; }
+.middle-config-help { margin-top:8px; font-size:12px; color:var(--muted); line-height:1.45; }
+@media (max-width: 760px) {
+  .middle-config-head { grid-template-columns: 1fr 96px; }
+  .middle-time-item { grid-template-columns: 64px 1fr; }
+}
+
+  
+
+/* v35 readability + full table visibility */
+header p, .calendar-sub, .calendar-help, .simple-sub { display:none !important; }
+.summary .counts { gap:4px; }
+.summary .pill { background:#fff; }
+.simple-title, .calendar-title, .week-head, .middle-config-title { font-size:16px; }
+.simple-worker-grid { display:grid; gap:10px; }
+.simple-worker-card { border:1px solid var(--line); border-radius:12px; padding:10px; background:#fff; }
+.simple-head { margin-bottom:8px; display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+.simple-head .meta { color:var(--muted); font-size:12px; margin-top:2px; }
+.chip-list { display:grid; gap:6px; }
+.chip { padding:8px; border-radius:10px; border:1px solid var(--line); background:#fff; }
+.chip-top { display:flex; justify-content:space-between; gap:8px; margin-bottom:3px; }
+.chip-main { font-weight:700; }
+.chip-sub, .chip-time { font-size:11px; color:var(--muted); }
+.week-card { margin-bottom:12px; }
+.day-detail-grid { display:grid; gap:10px; }
+.day-detail-card { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; }
+.day-detail-card summary { font-size:14px; }
+.day-detail-body { padding:10px; }
+.mobile-detail-panel, .desktop-detail-panel { display:block; }
+.fold-panel[hidden] { display:none !important; }
+.table-wrap, .week-calendar-scroll, .calendar-scroll { overflow:auto; -webkit-overflow-scrolling:touch; }
+#desktopTableWrap { display:block !important; }
+table { width:max-content; min-width:100%; table-layout:fixed; }
+th, td { min-width:112px; max-width:180px; white-space:normal; word-break:keep-all; overflow-wrap:anywhere; }
+.time-col { min-width:74px; max-width:74px; position:sticky; left:0; z-index:2; background:#fff; }
+thead .time-col { z-index:3; background:#f2f5fb; }
+.week-day-cell { min-height:160px; }
+.week-day-mobile-head { display:none; margin-bottom:8px; }
+.week-day-mobile-head .dow { font-weight:800; font-size:13px; }
+.week-day-mobile-head .date { font-size:12px; color:var(--muted); margin-top:2px; }
+.day-event .t1, .day-event .t2 { white-space:normal; overflow-wrap:anywhere; }
+.calendar-worker-head .name, .calendar-worker-head .meta, .calendar-block .b1, .calendar-block .b2, .calendar-block .b3 { white-space:normal; overflow-wrap:anywhere; }
+@media (max-width:900px){
+  .desktop-detail-panel { display:none; }
+}
+@media (min-width:901px){
+  .mobile-detail-panel { display:none; }
+}
+@media (max-width:760px){
+  .result-head { flex-wrap:wrap; }
+  .simple-head { flex-direction:column; }
+  .week-calendar-head { display:none; }
+  .week-calendar-body { display:grid; grid-template-columns:1fr; min-width:0; }
+  .week-calendar-scroll { overflow:visible; }
+  .week-calendar { overflow:visible; }
+  .week-day-cell { border-right:none; border-bottom:1px solid var(--line); min-height:auto; }
+  .week-day-cell:last-child { border-bottom:none; }
+  .week-day-mobile-head { display:block; }
+  .fourweek-note, .middle-config-help, .scroll-hint, .mobile-toolbar { display:block !important; }
+}
+
+
+/* v36 spreadsheet-first layout */
+.sheet-card { border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden; margin-bottom:10px; }
+.sheet-head { padding:10px 12px; border-bottom:1px solid var(--line); background:#f8fafc; display:flex; justify-content:space-between; gap:8px; align-items:center; }
+.sheet-title { font-weight:800; font-size:15px; }
+.sheet-note { font-size:12px; color:var(--muted); }
+.sheet-wrap { overflow:auto; -webkit-overflow-scrolling:touch; }
+.sheet-table { border-collapse:collapse; width:max-content; min-width:100%; table-layout:fixed; font-size:12px; }
+.sheet-table th, .sheet-table td { border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:6px 7px; text-align:center; vertical-align:middle; white-space:normal; overflow-wrap:anywhere; word-break:keep-all; }
+.sheet-table tr:last-child td, .sheet-table tr:last-child th { border-bottom:none; }
+.sheet-table th:last-child, .sheet-table td:last-child { border-right:none; }
+.sheet-table thead th { position:sticky; top:0; z-index:3; background:#f8fafc; }
+.sheet-sticky { position:sticky; left:0; z-index:2; background:#fff; }
+.sheet-table thead .sheet-sticky { z-index:4; background:#f8fafc; }
+.sheet-worker-col { min-width:120px; max-width:120px; text-align:left !important; }
+.sheet-time-col { min-width:64px; max-width:64px; }
+.sheet-day-col { min-width:120px; max-width:140px; }
+.sheet-worker-name { font-weight:800; font-size:12px; }
+.sheet-worker-meta { margin-top:2px; font-size:10px; color:var(--muted); }
+.sheet-cell { min-width:48px; }
+.sheet-cell .main { font-weight:800; line-height:1.15; }
+.sheet-cell .sub { margin-top:2px; font-size:10px; color:var(--muted); }
+.sheet-empty { color:#cbd5e1; background:#fff; }
+.sheet-cell.cell-work { background:#eff6ff; }
+.sheet-cell.cell-meal { background:#ecfdf5; }
+.sheet-cell.cell-break { background:#fff7ed; }
+.sheet-cell.cell-meeting { background:#eef2ff; }
+.sheet-cell.cell-cart { background:#fff1f2; }
+.sheet-cell.cell-assist { background:#f5f3ff; }
+.sheet-cell.cell-f3cart { background:#f3e8ff; }
+.cell-f3cart { background:#f3e8ff; }
+.cell-assist { background:#f5f3ff; }
+.cell-f3cart { background:#f3e8ff; }
+.sheet-chip-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.sheet-chip { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); background:#fff; }
+.sheet-block { display:grid; gap:10px; }
+.sheet-week-card { border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden; margin-bottom:12px; }
+.sheet-week-title { padding:10px 12px; font-weight:800; border-bottom:1px solid var(--line); background:#f8fafc; }
+.sheet-week-sub { padding:8px 12px 0; font-size:12px; color:var(--muted); }
+.sheet-week-detail { padding:10px 12px 12px; }
+.sheet-compact .sheet-worker-col { min-width:94px; max-width:94px; }
+.sheet-compact .sheet-time-col { min-width:58px; max-width:58px; }
+.sheet-compact .sheet-cell { min-width:42px; }
+.sheet-collapse { border-top:1px solid var(--line); }
+.sheet-collapse > summary { cursor:pointer; list-style:none; padding:10px 12px; font-weight:700; background:#fff; }
+.sheet-collapse > summary::-webkit-details-marker { display:none; }
+.sheet-day-stack { display:grid; gap:10px; padding:0 12px 12px; }
+.sheet-day-box { border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff; }
+.sheet-day-head { padding:8px 10px; font-weight:700; background:#fafbff; border-bottom:1px solid var(--line); }
+#calendarResult .calendar-card, #simpleResult .simple-section { margin-bottom:0; }
+@media (max-width:760px){
+  .sheet-head { padding:9px 10px; align-items:flex-start; flex-direction:column; }
+  .sheet-title { font-size:14px; }
+  .sheet-table { font-size:11px; }
+  .sheet-worker-col { min-width:96px; max-width:96px; }
+  .sheet-day-col { min-width:104px; max-width:120px; }
+  .sheet-time-col { min-width:56px; max-width:56px; }
+  .sheet-cell { min-width:42px; }
+}
+
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>근무 스케줄링 프로그램</h1>
+      <p>단일 HTML 파일 버전 v56 · Windows / iOS / Android 브라우저용</p>
+      <div class="notice-inline">오픈조·중간조·마감조는 매일 모두 운영 · 오픈조 2명(08:30) · 중간조는 요일별 인원 및 각 인원별 출근시간 설정 · 마감조 월~금 4명, 토 6명, 일 5명 · 월~목 13:30 / 금~일 13:50 · 마감조 식사 17:00 · 전 근무자 첫 근무지는 2F 카트 제외 · 마감조 첫 근무지는 엘베/출차/3F 균등 우선 · 모든 근무시간 근무지 배정 보장 · 3F 최대 3명 · 3F 카트내림 최대 3명 · 2F 보조 추가 · 2F 엘베·2F 출차·3F는 60분 고정</div>
+        <div class="notice-inline">GitHub Pages에 이 파일을 <b>index.html</b>로 올린 뒤, iPhone Safari에서 열고 <b>공유 → 홈 화면에 추가</b>로 사용하세요.</div>
+  </header>
+
+    <section class="card">
+      <h2>근무자 등록 (최대 40명)</h2>
+      <div id="errorBox" class="error-box" style="display:none"></div>
+      <noscript><div class="error-box" style="display:block">이 파일은 JavaScript가 실행되어야 작동합니다. iPhone에서는 <b>파일 앱 미리보기</b>가 아니라 <b>Safari에서 웹페이지로 연 상태</b>여야 버튼이 작동합니다.</div></noscript>
+      <div id="androidTip" class="android-tip">안드로이드에서는 CSV 버튼을 누르면 다운로드 또는 공유 시트가 열릴 수 있습니다. 표는 좌우 스크롤로 확인하세요.</div>
+      <div class="form-grid">
+        <input id="workerName" placeholder="이름" />
+        <select id="workerStart"></select>
+        <select id="workerHours">
+          <option value="6">6시간 근무</option>
+          <option value="8" selected>8시간 근무</option>
+        </select>
+        <button type="button" id="addWorkerBtn">추가</button>
+      </div>
+      <div class="muted small">시작 시간은 08:30 이후 15분 단위</div>
+      <div class="worker-list" id="workerList"></div>
+      <div class="action-grid mt8">
+        <button type="button" id="demoBtn" class="secondary">샘플 인원</button>
+        <button type="button" id="clearBtn" class="secondary">전체 삭제</button>
+        <button type="button" id="generateBtn" class="wide">스케줄 생성</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>핵심 규칙</h2>
+      <div class="summary">
+        <div class="counts">
+          <span class="pill">모든 근무시간은 근무지 배정 보장 · 한 근무지 최대 60분 · 2F 엘베·2F 출차·3F는 60분 고정 · 보조·2F카트·3F카트가 잔여 시간을 흡수</span>
+          <span class="pill">식사 1시간</span>
+          <span class="pill">휴식 15분, 15분, 10분 고정</span>
+          <span class="pill">안전회의 1회</span>
+          <span class="pill">2F 엘베 · 2F 출차 · 3F · 3F 카트 내림 · 2F 보조 · 2F 카트 내림</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="result-head">
+        <h2>핵심 스케줄</h2>
+        <button type="button" id="downloadCsvBtn" class="secondary">CSV</button>
+      </div>
+      <div id="summary" class="summary"></div>
+      <div id="calendarResult" class="calendar-result"></div>
+      <div id="simpleResult" class="simple-result"></div>
+
+      <details class="fold-panel mobile-detail-panel">
+        <summary>근무자별 상세 타임라인 보기</summary>
+        <div class="mobile-toolbar muted small">모바일에서는 근무자 카드를 눌러 타임라인을 펼치세요.</div>
+        <div id="mobileResult" class="mobile-result"></div>
+      </details>
+
+      <details class="fold-panel desktop-detail-panel">
+        <summary>상세 시간표 보기 (15분 축약)</summary>
+        <div class="table-wrap" id="desktopTableWrap">
+        <div class="scroll-hint muted small">좌우로 밀어서 표 보기</div>
+        <table id="resultTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+        </div>
+      </details>
+    </section>
+
+    <section class="card">
+      <div class="result-head">
+        <h2>4주 운영 캘린더</h2>
+        <button type="button" id="downloadClosingCsvBtn" class="secondary">4주 CSV</button>
+      </div>
+      <div class="fourweek-toolbar">
+        <input id="fourWeekStartDate" type="date" class="wide-span" />
+        <button type="button" id="generateClosing4WeekBtn" class="secondary">4주 표 생성</button>
+        <button type="button" id="useTodayWeekBtn" class="secondary">이번 주 기준</button>
+      </div>
+      <div class="muted small fourweek-note">오픈·중간·마감조를 4주 캘린더와 날짜별 위치표로 표시</div>
+      <div class="middle-config-box">
+        <div class="middle-config-title">중간조 요일별 설정</div>
+        <div class="middle-config-grid">
+          <div class="middle-config-row" data-day="1"><div class="middle-config-head"><div class="day">월요일</div><div class="field"><label for="middleCount1">인원</label><input id="middleCount1" data-middle-day="1" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="1"></div></div>
+          <div class="middle-config-row" data-day="2"><div class="middle-config-head"><div class="day">화요일</div><div class="field"><label for="middleCount2">인원</label><input id="middleCount2" data-middle-day="2" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="2"></div></div>
+          <div class="middle-config-row" data-day="3"><div class="middle-config-head"><div class="day">수요일</div><div class="field"><label for="middleCount3">인원</label><input id="middleCount3" data-middle-day="3" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="3"></div></div>
+          <div class="middle-config-row" data-day="4"><div class="middle-config-head"><div class="day">목요일</div><div class="field"><label for="middleCount4">인원</label><input id="middleCount4" data-middle-day="4" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="4"></div></div>
+          <div class="middle-config-row" data-day="5"><div class="middle-config-head"><div class="day">금요일</div><div class="field"><label for="middleCount5">인원</label><input id="middleCount5" data-middle-day="5" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="5"></div></div>
+          <div class="middle-config-row" data-day="6"><div class="middle-config-head"><div class="day">토요일</div><div class="field"><label for="middleCount6">인원</label><input id="middleCount6" data-middle-day="6" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="6"></div></div>
+          <div class="middle-config-row" data-day="0"><div class="middle-config-head"><div class="day">일요일</div><div class="field"><label for="middleCount0">인원</label><input id="middleCount0" data-middle-day="0" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="0"></div></div>
+        </div>
+        <div class="middle-config-help">중간조는 매일 생성되며, 요일별로 인원 수와 <strong>각 인원별 출근 시간</strong>을 따로 둘 수 있습니다. 식사는 각 인원 기준으로 <strong>출근 후 3시간~3시간 30분</strong> 창으로 안내합니다.</div>
+      </div>
+      <div id="closing4Summary" class="summary"></div>
+      <div id="closing4Week" class="fourweek-wrap"></div>
+    </section>
+
+  </div>
+  <script>
+(function(){
+  if (!Object.fromEntries) {
+    Object.fromEntries = function(entries) {
+      var obj = {};
+      if (!entries) return obj;
+      for (var i = 0; i < entries.length; i++) {
+        var pair = entries[i] || [];
+        obj[pair[0]] = pair[1];
+      }
+      return obj;
+    };
+  }
+  if (!Number.isFinite) {
+    Number.isFinite = function(value) { return typeof value === 'number' && isFinite(value); };
+  }
+  if (!Array.from) {
+    Array.from = function(value) { return Array.prototype.slice.call(value); };
+  }
+  if (!String.prototype.padStart) {
+    String.prototype.padStart = function(targetLength, padString) {
+      var str = String(this);
+      targetLength = targetLength >> 0;
+      padString = String(typeof padString !== 'undefined' ? padString : ' ');
+      if (str.length >= targetLength) return str;
+      targetLength = targetLength - str.length;
+      while (padString.length < targetLength) padString += padString;
+      return padString.slice(0, targetLength) + str;
+    };
+  }
+})();
+
+window.Utils = (() => {
+  const TICK_MIN = 5;
+  const DAY_START = '08:30';
+  const DAY_END = '22:30';
+
+  function timeToMin(t) {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  function minToTime(min) {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  function makeStartOptions() {
+    const out = [];
+    const s = timeToMin(DAY_START);
+    const e = timeToMin('19:00');
+    for (let t = s; t <= e; t += 15) out.push(minToTime(t));
+    return out;
+  }
+
+  function overlap(aStart, aEnd, bStart, bEnd) {
+    return aStart < bEnd && bStart < aEnd;
+  }
+
+  function generateId() {
+    try {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+    } catch (e) {}
+    return 'w_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
+  }
+
+  return { TICK_MIN, DAY_START, DAY_END, timeToMin, minToTime, makeStartOptions, overlap, generateId };
+})();
+
+
+window.Data = {
+  WORKPLACES: ['2F 엘베', '2F 출차', '3F', '3F 카트 내림', '2F 보조', '2F 카트 내림'],
+  FIXED_EVENTS: [
+    { label: '안전회의1', start: '15:00', end: '15:15', type: 'meeting' },
+    { label: '안전회의2', start: '15:15', end: '15:30', type: 'meeting' },
+  ],
+  MEAL_STARTS: ['11:30', '14:00', '16:40', '17:00'],
+  MEAL_DURATION_MIN: 60,
+  BREAKS: [15, 15, 10]
+};
+
+
+window.Scheduler = (() => {
+  const { WORKPLACES, FIXED_EVENTS, MEAL_STARTS, MEAL_DURATION_MIN, BREAKS } = window.Data;
+  const BREAK_RULE_TEXT = '휴식은 15분, 15분, 10분으로 고정';
+  const { timeToMin, minToTime, overlap } = window.Utils;
+
+  const EXTRA_WP = '2F 카트 내림';
+  const EXTRA_WP_3F = '3F 카트 내림';
+  const ASSIST_WP = '2F 보조';
+  const MAIN_2F_WPS = ['2F 엘베', '2F 출차'];
+  const FIXED_60_WPS = ['2F 엘베', '2F 출차', '3F'];
+  const FLEX_WPS = [ASSIST_WP, EXTRA_WP, EXTRA_WP_3F];
+  const MAIN_2F_CAPS = { '2F 엘베': 1, '2F 출차': 1 };
+  const WP_CAPS = { '2F 엘베': 1, '2F 출차': 1, '3F': 3, '3F 카트 내림': 3, '2F 보조': 1, '2F 카트 내림': Number.POSITIVE_INFINITY };
+  const DEFAULT_WORK_BLOCK_BY_WP = { '2F 엘베': 60, '2F 출차': 60, '3F': 60, '3F 카트 내림': 30, '2F 보조': 60, '2F 카트 내림': 30 };
+  const CLOSE_GROUP_START = timeToMin('13:30');
+  const OPEN_GROUP_START = timeToMin('08:30');
+
+  function getGroup(startMin) {
+    if (startMin === OPEN_GROUP_START) return '오픈조';
+    if (startMin >= CLOSE_GROUP_START) return '마감조';
+    return '중간조';
+  }
+
+  function cloneWorker(w) {
+    const startMin = timeToMin(w.startTime);
+    const paidWorkMin = Number(w.hours) * 60;
+    const endMin = startMin + paidWorkMin + MEAL_DURATION_MIN; // 식사 1시간 별도
+    return {
+      ...w,
+      startMin,
+      paidWorkMin,
+      endMin,
+      group: getGroup(startMin),
+      segments: [],
+      placeCounts: Object.fromEntries(WORKPLACES.map(p => [p, 0])),
+      warnings: [],
+      firstAssignedWp: null,
+      _firstWpState: null,
+      _segId: 0
+    };
+  }
+
+  function addSegment(worker, start, end, type, label) {
+    if (end <= start) return null;
+    const seg = { id: ++worker._segId, start, end, type, label };
+    worker.segments.push(seg);
+    return seg;
+  }
+
+  function canPlace(worker, start, end) {
+    return !worker.segments.some(s => overlap(s.start, s.end, start, end));
+  }
+
+  function slotRange(start, end) {
+    const out = [];
+    for (let t = start; t < end; t += 5) out.push(t);
+    return out;
+  }
+
+  function initCoverage() { return {}; }
+  function getCounts(coverage, t) {
+    if (!coverage[t]) coverage[t] = { '2F 엘베': 0, '2F 출차': 0, '3F': 0, '3F 카트 내림': 0, '2F 보조': 0, '2F 카트 내림': 0 };
+    return coverage[t];
+  }
+
+  function getMealCount(mealCoverage, t) {
+    if (mealCoverage[t] == null) mealCoverage[t] = 0;
+    return mealCoverage[t];
+  }
+
+  function createSeed() {
+    let seed = Date.now() ^ Math.floor(Math.random() * 0x7fffffff);
+    try {
+      if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+        const buf = new Uint32Array(1);
+        window.crypto.getRandomValues(buf);
+        seed = (seed ^ buf[0]) >>> 0;
+      }
+    } catch (_) {}
+    return (seed >>> 0) || 1;
+  }
+
+  function createRng(seed) {
+    let state = (seed >>> 0) || 1;
+    return {
+      seed: state,
+      next() {
+        state = (state * 1664525 + 1013904223) >>> 0;
+        return state / 4294967296;
+      },
+      int(max) {
+        if (!Number.isFinite(max) || max <= 0) return 0;
+        return Math.floor(this.next() * max);
+      },
+      pick(arr) {
+        if (!arr || !arr.length) return null;
+        return arr[this.int(arr.length)];
+      }
+    };
+  }
+
+  function randomizeEqualCandidates(items, getScore, rng, epsilon) {
+    const eps = Number.isFinite(epsilon) ? epsilon : 0.000001;
+    return items
+      .map(function(item) { return { item: item, score: getScore(item), tie: rng ? rng.next() : Math.random() }; })
+      .sort(function(a, b) {
+        if (Math.abs(a.score - b.score) > eps) return a.score - b.score;
+        return a.tie - b.tie;
+      })
+      .map(function(entry) { return entry.item; });
+  }
+
+  let lastScheduleFingerprint = null;
+
+  function insertFixedMeeting(worker, meetingCounts, rng) {
+    const overlapped = FIXED_EVENTS
+      .map(ev => ({ ...ev, s: timeToMin(ev.start), e: timeToMin(ev.end) }))
+      .filter(ev => overlap(worker.startMin, worker.endMin, ev.s, ev.e));
+    if (!overlapped.length) return;
+
+    const ordered = randomizeEqualCandidates(overlapped, function(ev) {
+      return (meetingCounts[ev.label] || 0) * 1000 + ev.s;
+    }, rng, 0.5);
+
+    const ev = ordered[0];
+    addSegment(worker, ev.s, ev.e, ev.type, ev.label);
+    meetingCounts[ev.label] = (meetingCounts[ev.label] || 0) + 1;
+  }
+
+  function canMealSlot(worker, start, end, mealCoverage) {
+    if (worker.group === '마감조') return true;
+    for (const t of slotRange(start, end)) {
+      if (getMealCount(mealCoverage, t) >= 2) return false;
+    }
+    return true;
+  }
+
+  function reserveMealSlot(worker, start, end, mealCoverage) {
+    if (worker.group === '마감조') return;
+    for (const t of slotRange(start, end)) mealCoverage[t] = getMealCount(mealCoverage, t) + 1;
+  }
+
+  function mealLoadScore(start, end, mealCoverage) {
+    let total = 0;
+    for (const t of slotRange(start, end)) total += getMealCount(mealCoverage, t);
+    return total;
+  }
+
+  function chooseMeal(worker, mealCoverage, preferredStartMin, rng) {
+    const target = worker.startMin + 195; // 출근 후 3시간15분
+    const winStart = worker.startMin + 180;
+    const winEnd = worker.startMin + 210;
+    const earliest = Math.max(winStart, worker.startMin);
+    const latest = Math.min(winEnd, worker.endMin - MEAL_DURATION_MIN);
+
+    const candidates = [];
+    function pushCandidate(s, preferred) {
+      const e = s + MEAL_DURATION_MIN;
+      if (s < earliest || s > latest) return;
+      if (!canPlace(worker, s, e)) return;
+      if (!canMealSlot(worker, s, e, mealCoverage)) return;
+      candidates.push({
+        s, e,
+        preferred,
+        load: mealLoadScore(s, e, mealCoverage),
+        dist: Math.abs(s - target)
+      });
+    }
+
+    if (Number.isFinite(preferredStartMin)) {
+      pushCandidate(preferredStartMin, -2);
+    }
+    for (const t of MEAL_STARTS) pushCandidate(timeToMin(t), 0);
+    for (let s = earliest; s <= latest; s += 5) {
+      const isFixed = MEAL_STARTS.some(t => timeToMin(t) === s);
+      const preferred = (Number.isFinite(preferredStartMin) && s === preferredStartMin) ? -2 : (isFixed ? 0 : 1);
+      pushCandidate(s, preferred);
+    }
+
+    if (candidates.length) {
+      const ordered = randomizeEqualCandidates(candidates, function(c) {
+        return (c.preferred * 1000000) + (c.load * 1000) + c.dist + (c.s / 100000);
+      }, rng, 0.5);
+      const c = ordered[0];
+      addSegment(worker, c.s, c.e, 'meal', '식사');
+      reserveMealSlot(worker, c.s, c.e, mealCoverage);
+      return;
+    }
+
+    worker.warnings.push('식사시간(출근+3:00~3:30) 배치 실패');
+
+    const fallback = [];
+    for (let s = worker.startMin + 120; s + 60 <= worker.endMin - 30; s += 5) {
+      const e = s + 60;
+      if (!canPlace(worker, s, e)) continue;
+      if (!canMealSlot(worker, s, e, mealCoverage)) continue;
+      const fixedDist = Math.min.apply(null, MEAL_STARTS.map(t => Math.abs(s - timeToMin(t))));
+      const preferredDist = Number.isFinite(preferredStartMin) ? Math.abs(s - preferredStartMin) : 9999;
+      fallback.push({ s, e, fixedDist, preferredDist, load: mealLoadScore(s, e, mealCoverage), dist: Math.abs(s - target) });
+    }
+    if (fallback.length) {
+      const ordered = randomizeEqualCandidates(fallback, function(c) {
+        return (c.preferredDist * 1000000) + (c.fixedDist * 10000) + (c.load * 100) + c.dist + (c.s / 100000);
+      }, rng, 0.5);
+      const c = ordered[0];
+      addSegment(worker, c.s, c.e, 'meal', '식사');
+      reserveMealSlot(worker, c.s, c.e, mealCoverage);
+      if (Number.isFinite(preferredStartMin) && c.s !== preferredStartMin) {
+        worker.warnings.push('선호 식사시각 ' + minToTime(preferredStartMin) + ' 대신 ' + minToTime(c.s) + ' 배치');
+      }
+    } else {
+      worker.warnings.push('식사 배치 불가');
+    }
+  }
+
+  function validateFixedDurationPlaces(workers, labelFilter) {
+    const issues = [];
+    const allowed = Array.isArray(labelFilter) && labelFilter.length ? new Set(labelFilter) : null;
+    for (const worker of workers) {
+      const segments = (worker.segments || []).slice().sort(function(a, b) {
+        if (a.start !== b.start) return a.start - b.start;
+        return a.end - b.end;
+      });
+      for (const seg of segments) {
+        if (seg.type !== 'work') continue;
+        if (allowed && !allowed.has(seg.label)) continue;
+        const duration = seg.end - seg.start;
+        if (duration !== 60) {
+          issues.push(worker.name + ' ' + minToTime(seg.start) + '~' + minToTime(seg.end) + ' ' + seg.label + ' ' + duration + '분');
+        }
+      }
+    }
+    return issues;
+  }
+
+  function validateMaxWorkPerPlace(workers, labelFilter) {
+    const issues = [];
+    const allowed = Array.isArray(labelFilter) && labelFilter.length ? new Set(labelFilter) : null;
+    for (const worker of workers) {
+      const segments = (worker.segments || []).slice().sort(function(a, b) {
+        if (a.start !== b.start) return a.start - b.start;
+        return a.end - b.end;
+      });
+
+      for (const seg of segments) {
+        if (seg.type !== 'work') continue;
+        if (allowed && !allowed.has(seg.label)) continue;
+        if ((seg.end - seg.start) > 60) {
+          issues.push(worker.name + ' ' + minToTime(seg.start) + '~' + minToTime(seg.end) + ' ' + seg.label + ' 단일 블록 ' + (seg.end - seg.start) + '분');
+        }
+      }
+
+      let prev = null;
+      let total = 0;
+      for (const seg of segments) {
+        if (seg.type !== 'work' || (allowed && !allowed.has(seg.label))) {
+          prev = null;
+          total = 0;
+          continue;
+        }
+        if (prev && prev.type === 'work' && prev.label === seg.label && prev.end === seg.start) {
+          total += (seg.end - seg.start);
+        } else {
+          total = (seg.end - seg.start);
+        }
+        if (total > 60) {
+          issues.push(worker.name + ' ' + seg.label + ' 연속 근무 ' + total + '분');
+        }
+        prev = seg;
+      }
+    }
+    return issues;
+  }
+
+
+  function validatePlaceCapViolations(coverage, placeFilter) {
+    const issues = [];
+    const allowed = Array.isArray(placeFilter) && placeFilter.length ? new Set(placeFilter) : null;
+    const times = Object.keys(coverage || {}).map(Number).sort(function(a, b) { return a - b; });
+    times.forEach(function(t) {
+      const counts = coverage[t] || {};
+      Object.keys(WP_CAPS).forEach(function(wp) {
+        if (allowed && !allowed.has(wp)) return;
+        const cap = WP_CAPS[wp];
+        if (!Number.isFinite(cap)) return;
+        const used = counts[wp] || 0;
+        if (used > cap) issues.push(minToTime(t) + ' ' + wp + ' ' + used + '/' + cap);
+      });
+    });
+    return issues;
+  }
+
+  function normalizePlaceCapViolations(workers, targetPlaces) {
+    const targets = (targetPlaces || []).slice();
+    const fixes = [];
+    let changed = true;
+    let pass = 0;
+
+    function firstWorkSeg(worker) {
+      const segs = (worker.segments || []).filter(function(s) { return s.type === 'work'; }).sort(function(a, b) {
+        if (a.start !== b.start) return a.start - b.start;
+        return a.end - b.end;
+      });
+      return segs[0] || null;
+    }
+
+    while (changed && pass < 12) {
+      changed = false;
+      pass += 1;
+      const state = rebuildDerivedState(workers);
+      const coverage = state.coverage;
+      const times = Object.keys(coverage || {}).map(Number).sort(function(a, b) { return a - b; });
+
+      outer:
+      for (const t of times) {
+        for (const wp of targets) {
+          const used = ((coverage[t] || {})[wp]) || 0;
+          const cap = WP_CAPS[wp];
+          if (!Number.isFinite(cap) || used <= cap) continue;
+
+          const offenders = [];
+          workers.forEach(function(worker) {
+            const seg = (worker.segments || []).find(function(s) {
+              return s.type === 'work' && s.label === wp && s.start <= t && t < s.end;
+            });
+            if (seg) {
+              const firstSeg = firstWorkSeg(worker);
+              offenders.push({ worker: worker, seg: seg, isFirstWork: !!(firstSeg && firstSeg.start === seg.start && firstSeg.end === seg.end && firstSeg.label === seg.label) });
+            }
+          });
+
+          offenders.sort(function(a, b) {
+            if (a.isFirstWork !== b.isFirstWork) return a.isFirstWork ? 1 : -1;
+            if (a.seg.start !== b.seg.start) return b.seg.start - a.seg.start;
+            return (a.seg.end - a.seg.start) - (b.seg.end - b.seg.start);
+          });
+
+          for (const item of offenders) {
+            const altOrder = [ASSIST_WP, EXTRA_WP, EXTRA_WP_3F, '2F 엘베', '2F 출차', '3F'];
+            const alternatives = altOrder.filter(function(alt) {
+              if (alt === wp) return false;
+              if ((item.seg.end - item.seg.start) !== 60 && FIXED_60_WPS.indexOf(alt) !== -1) return false;
+              return true;
+            });
+            let moved = false;
+            for (const alt of alternatives) {
+              if (!canAssignToWp(alt, item.seg.start, item.seg.end, coverage)) continue;
+              item.seg.label = alt;
+              if (!item.worker.firstAssignedWp || item.worker.firstAssignedWp === wp) {
+                const firstSeg = firstWorkSeg(item.worker);
+                if (firstSeg && firstSeg.start === item.seg.start && firstSeg.end === item.seg.end) {
+                  item.worker.firstAssignedWp = alt;
+                }
+              }
+              fixes.push(item.worker.name + ' ' + minToTime(item.seg.start) + '~' + minToTime(item.seg.end) + ' ' + wp + '→' + alt);
+              changed = true;
+              moved = true;
+              break;
+            }
+            if (moved) break outer;
+          }
+        }
+      }
+    }
+
+    return fixes;
+  }
+
+  function pickRepairWorkplace(worker, blockedWp, start, end, coverage) {
+    const duration = end - start;
+    let candidateWps = WORKPLACES.filter(function(wp) { return wp !== blockedWp; });
+    if (duration !== 60) {
+      const flexOnly = candidateWps.filter(function(wp) { return FIXED_60_WPS.indexOf(wp) === -1; });
+      if (flexOnly.length) candidateWps = flexOnly;
+    }
+    const candidates = candidateWps.map(function(wp) {
+      let score = 0;
+      for (const t of slotRange(start, end)) {
+        const c = getCounts(coverage, t);
+        const cap = WP_CAPS[wp];
+        if (Number.isFinite(cap) && (c[wp] + 1) > cap) score += 1000;
+        score += (c[wp] || 0) * 4;
+        if (duration !== 60 && FIXED_60_WPS.indexOf(wp) !== -1) score += 5000;
+        if (wp === ASSIST_WP) score -= 18;
+        if (wp === EXTRA_WP) score -= 14;
+        if (wp === EXTRA_WP_3F) score -= 14;
+        if (wp === '3F') score -= 10;
+        if (wp === '2F 엘베' || wp === '2F 출차') score += 4;
+      }
+      if (worker && worker.firstAssignedWp && wp === worker.firstAssignedWp) score += 8;
+      return { wp: wp, score: score };
+    }).sort(function(a, b) {
+      if (a.score !== b.score) return a.score - b.score;
+      return a.wp.localeCompare(b.wp);
+    });
+    return candidates.length ? candidates[0].wp : ASSIST_WP;
+  }
+
+  function normalizeFixed60PlaceDurations(workers, fixedPlaces) {
+    const fixedSet = new Set(fixedPlaces || []);
+    const fixes = [];
+    const state = rebuildDerivedState(workers);
+    const coverage = state.coverage;
+
+    workers.forEach(function(worker) {
+      const segments = (worker.segments || []).slice().sort(function(a, b) {
+        if (a.start !== b.start) return a.start - b.start;
+        return a.end - b.end;
+      });
+      segments.forEach(function(seg) {
+        if (seg.type !== 'work' || !fixedSet.has(seg.label)) return;
+        const duration = seg.end - seg.start;
+        if (duration === 60) return;
+
+        for (const t of slotRange(seg.start, seg.end)) {
+          const counts = getCounts(coverage, t);
+          counts[seg.label] = Math.max(0, (counts[seg.label] || 0) - 1);
+        }
+
+        const oldLabel = seg.label;
+        const replacement = pickRepairWorkplace(worker, seg.label, seg.start, seg.end, coverage);
+        seg.label = replacement;
+        fixes.push(worker.name + ' ' + minToTime(seg.start) + '~' + minToTime(seg.end) + ' ' + oldLabel + ' ' + duration + '분 → ' + replacement + ' 재배정');
+
+        for (const t of slotRange(seg.start, seg.end)) {
+          getCounts(coverage, t)[replacement] += 1;
+        }
+        if (worker.firstAssignedWp === oldLabel) {
+          const firstSeg = segments.find(function(s) { return s.type === 'work'; });
+          if (firstSeg && firstSeg.start === seg.start && firstSeg.end === seg.end) worker.firstAssignedWp = replacement;
+        }
+      });
+      worker.segments = segments.sort(function(a, b) {
+        if (a.start !== b.start) return a.start - b.start;
+        return a.end - b.end;
+      });
+    });
+
+    return fixes;
+  }
+
+  function normalizeProtectedPlaceChains(workers, protectedPlaces) {
+    const protectedSet = new Set(protectedPlaces || []);
+    const fixes = [];
+    let changed = true;
+    let pass = 0;
+
+    while (changed && pass < 8) {
+      changed = false;
+      pass += 1;
+      const state = rebuildDerivedState(workers);
+      const coverage = state.coverage;
+
+      workers.forEach(function(worker) {
+        const segments = (worker.segments || []).slice().sort(function(a, b) {
+          if (a.start !== b.start) return a.start - b.start;
+          return a.end - b.end;
+        });
+        let chainLabel = null;
+        let chainTotal = 0;
+        let prevSeg = null;
+
+        segments.forEach(function(seg) {
+          if (seg.type !== 'work' || !protectedSet.has(seg.label)) {
+            chainLabel = null;
+            chainTotal = 0;
+            prevSeg = seg;
+            return;
+          }
+
+          const duration = seg.end - seg.start;
+          const isContiguous = !!(prevSeg && prevSeg.type === 'work' && prevSeg.label === seg.label && prevSeg.end === seg.start && chainLabel === seg.label);
+          const nextTotal = isContiguous ? (chainTotal + duration) : duration;
+
+          if (!isContiguous || nextTotal <= 60) {
+            chainLabel = seg.label;
+            chainTotal = isContiguous ? nextTotal : duration;
+            prevSeg = seg;
+            return;
+          }
+
+          for (const t of slotRange(seg.start, seg.end)) {
+            const counts = getCounts(coverage, t);
+            counts[seg.label] = Math.max(0, (counts[seg.label] || 0) - 1);
+          }
+
+          const replacement = pickRepairWorkplace(worker, seg.label, seg.start, seg.end, coverage);
+          const oldLabel = seg.label;
+          seg.label = replacement;
+          changed = true;
+          fixes.push(worker.name + ' ' + oldLabel + ' ' + minToTime(seg.start) + '~' + minToTime(seg.end) + ' → ' + replacement + ' 재배정');
+
+          for (const t of slotRange(seg.start, seg.end)) {
+            getCounts(coverage, t)[replacement] += 1;
+          }
+
+          if (protectedSet.has(replacement) && prevSeg && prevSeg.type === 'work' && prevSeg.label === replacement && prevSeg.end === seg.start) {
+            chainLabel = replacement;
+            chainTotal = (prevSeg.end - prevSeg.start) + duration;
+          } else {
+            chainLabel = replacement;
+            chainTotal = duration;
+          }
+          prevSeg = seg;
+        });
+
+        worker.segments = segments.sort(function(a, b) {
+          if (a.start !== b.start) return a.start - b.start;
+          return a.end - b.end;
+        });
+      });
+    }
+
+    return fixes;
+  }
+
+  function ensureFullWorkAssignment(workers) {
+    const fixes = [];
+    const state = rebuildDerivedState(workers);
+    const coverage = state.coverage;
+
+    workers.forEach(function(worker) {
+      const original = (worker.segments || []).slice().sort(function(a, b) {
+        if (a.start !== b.start) return a.start - b.start;
+        return a.end - b.end;
+      });
+      const rebuilt = [];
+      let cursor = worker.startMin;
+
+      function fillGap(start, end) {
+        let t = start;
+        while (t < end) {
+          const remain = end - t;
+          const dur = Math.min(60, remain);
+          const forcedWp = chooseForcedWorkplace(worker, t, t + dur, coverage);
+          rebuilt.push({ id: 'auto_fill_' + worker.id + '_' + t + '_' + (t + dur), start: t, end: t + dur, type: 'work', label: forcedWp });
+          fixes.push(worker.name + ' ' + minToTime(t) + '~' + minToTime(t + dur) + ' ' + forcedWp + ' 보정배정' + (dur < 30 ? ' (예외 ' + dur + '분)' : ''));
+          t += dur;
+        }
+      }
+
+      original.forEach(function(seg) {
+        if (cursor < seg.start) fillGap(cursor, seg.start);
+        rebuilt.push(seg);
+        cursor = Math.max(cursor, seg.end);
+      });
+      if (cursor < worker.endMin) fillGap(cursor, worker.endMin);
+
+      worker.segments = rebuilt.sort(function(a, b) {
+        if (a.start !== b.start) return a.start - b.start;
+        return a.end - b.end;
+      });
+    });
+
+    return fixes;
+  }
+
+  function countUnassignedMinutes(workers) {
+    let total = 0;
+    workers.forEach(function(worker) {
+      const segments = (worker.segments || []).slice().sort(function(a, b) {
+        if (a.start !== b.start) return a.start - b.start;
+        return a.end - b.end;
+      });
+      let cursor = worker.startMin;
+      segments.forEach(function(seg) {
+        if (cursor < seg.start) total += (seg.start - cursor);
+        cursor = Math.max(cursor, seg.end);
+      });
+      if (cursor < worker.endMin) total += (worker.endMin - cursor);
+    });
+    return total;
+  }
+
+  function rebuildDerivedState(workers) {
+    const coverage = initCoverage();
+    const mealCoverage = {};
+    const meetingCounts = Object.fromEntries(FIXED_EVENTS.map(function(ev) { return [ev.label, 0]; }));
+
+    workers.forEach(function(worker) {
+      worker.placeCounts = Object.fromEntries(WORKPLACES.map(function(p) { return [p, 0]; }));
+      (worker.segments || []).forEach(function(seg) {
+        if (seg.type === 'work' && seg.label && coverage) {
+          for (const t of slotRange(seg.start, seg.end)) {
+            getCounts(coverage, t)[seg.label] += 1;
+          }
+          worker.placeCounts[seg.label] = (worker.placeCounts[seg.label] || 0) + 1;
+        }
+        if (seg.type === 'meal' && worker.group !== '마감조') {
+          for (const t of slotRange(seg.start, seg.end)) {
+            mealCoverage[t] = getMealCount(mealCoverage, t) + 1;
+          }
+        }
+        if (seg.type === 'meeting') {
+          meetingCounts[seg.label] = (meetingCounts[seg.label] || 0) + 1;
+        }
+      });
+    });
+
+    return { coverage: coverage, mealCoverage: mealCoverage, meetingCounts: meetingCounts };
+  }
+
+  function chooseBreaks(worker, rng) {
+    const shiftLen = worker.endMin - worker.startMin;
+    const targetOffsets = shiftLen >= (8 * 60) ? [90, 180, 300] : [80, 170, 250];
+    let lastBreakStart = worker.startMin;
+
+    for (let i = 0; i < BREAKS.length; i++) {
+      const dur = BREAKS[i];
+      const target = worker.startMin + targetOffsets[i];
+      let candidates = [];
+      let bestScore = Number.POSITIVE_INFINITY;
+
+      for (let delta = 0; delta <= 90; delta += 5) {
+        const tryStarts = delta === 0 ? [target] : [target - delta, target + delta];
+        for (const s of tryStarts) {
+          const e = s + dur;
+          if (s < worker.startMin + 30) continue;
+          if (e > worker.endMin - 30) continue;
+          if (s - lastBreakStart > 90) continue;
+          if (!canPlace(worker, s, e)) continue;
+          const score = Math.abs(s - target);
+          if (score < bestScore) {
+            bestScore = score;
+            candidates = [{ s, e, score }];
+          } else if (score === bestScore) {
+            candidates.push({ s, e, score });
+          }
+        }
+        if (candidates.length) break;
+      }
+
+      const best = candidates.length ? (rng ? rng.pick(candidates) : candidates[0]) : null;
+      if (best) {
+        addSegment(worker, best.s, best.e, 'break', '휴식' + (i + 1) + '(' + dur + '분)');
+        lastBreakStart = best.s;
+      } else {
+        worker.warnings.push('휴식 ' + (i + 1) + ' (' + dur + '분) 배치 실패');
+      }
+    }
+  }
+
+  function getPrevContiguousWorkInfo(worker, atTime) {
+    // atTime 직전까지 연속된 같은 근무지 누적 시간을 계산
+    let cursor = atTime;
+    let lastWp = null;
+    let total = 0;
+
+    while (true) {
+      const prev = worker.segments
+        .filter(s => s.type === 'work' && s.end === cursor)
+        .sort((a, b) => a.start - b.start)
+        .slice(-1)[0];
+      if (!prev) break;
+
+      if (lastWp == null) {
+        lastWp = prev.label;
+        total += (prev.end - prev.start);
+        cursor = prev.start;
+        continue;
+      }
+
+      if (prev.label !== lastWp) break;
+      total += (prev.end - prev.start);
+      cursor = prev.start;
+    }
+
+    return { lastWp, contiguousMin: total };
+  }
+
+  function canAssignToWp(wp, start, end, coverage) {
+    for (const t of slotRange(start, end)) {
+      const c = getCounts(coverage, t);
+      if ((c[wp] + 1) > WP_CAPS[wp]) return false;
+    }
+    return true;
+  }
+
+  function workplaceScore(worker, wp, start, end, coverage, rotationCtx) {
+    if (!canAssignToWp(wp, start, end, coverage)) return Number.POSITIVE_INFINITY;
+
+    // 순환 규칙: 동일 근무지 연속 배치는 최대 60분까지만 허용 (일반 근무 기본 60분, 2F 카트 내림 기본 30분)
+    if (rotationCtx && rotationCtx.lastWp === wp) {
+      // 추가 규칙: 3F / 2F 카트 내림은 블록이 끝나면 반드시 다른 근무지로 순환
+      if (wp === '3F' || wp === EXTRA_WP || wp === EXTRA_WP_3F) return Number.POSITIVE_INFINITY;
+      const nextContiguous = (rotationCtx.contiguousMin || 0) + (end - start);
+      if ((rotationCtx.contiguousMin || 0) >= 60) return Number.POSITIVE_INFINITY;
+      if (nextContiguous > 60) return Number.POSITIVE_INFINITY;
+    }
+
+    let score = (worker.placeCounts[wp] || 0) * 3;
+
+    // 순환 선호 규칙: 2F 메인 근무 후에는 3F / 3F 카트 내림 / 2F 카트 내림을 우선 고려
+    const prevWp = rotationCtx && rotationCtx.lastWp ? rotationCtx.lastWp : null;
+    if (prevWp && MAIN_2F_WPS.indexOf(prevWp) !== -1) {
+      if (MAIN_2F_WPS.indexOf(wp) !== -1) score += 24; // 2F 메인 -> 2F 메인 연속은 강한 패널티
+      if (wp === '3F') score -= 8;
+      if (wp === ASSIST_WP) score -= 7;
+      if (wp === EXTRA_WP_3F) score -= 6;
+      if (wp === EXTRA_WP) score -= 6;
+    }
+    // 3F / 3F 카트 내림 / 2F 카트 내림 이후에도 같은 자리 반복보다 다른 근무지 순환을 우선
+    // (단, 인원/상한/최소배치 제약이 강하면 예외적으로 같은 자리 배치가 선택될 수 있음)
+    if (prevWp === '3F') {
+      if (wp === '3F') score += 22; // 3F -> 3F 연속은 강한 패널티(순환 유도)
+      if (MAIN_2F_WPS.indexOf(wp) !== -1) score -= 6; // 3F 다음엔 2F 메인 우선
+      if (wp === ASSIST_WP) score -= 5;
+      if (wp === EXTRA_WP_3F) score -= 4;
+      if (wp === EXTRA_WP) score -= 4; // 또는 카트 내림도 허용
+    }
+    if (prevWp === EXTRA_WP) {
+      if (wp === EXTRA_WP) score += 22; // 카트 -> 카트 연속도 회피
+      if (MAIN_2F_WPS.indexOf(wp) !== -1) score -= 6;
+      if (wp === ASSIST_WP) score -= 5;
+      if (wp === '3F') score -= 4;
+      if (wp === EXTRA_WP_3F) score -= 4;
+    }
+    if (prevWp === EXTRA_WP_3F) {
+      if (wp === EXTRA_WP_3F) score += 22;
+      if (MAIN_2F_WPS.indexOf(wp) !== -1) score -= 6;
+      if (wp === ASSIST_WP) score -= 5;
+      if (wp === '3F') score -= 4;
+      if (wp === EXTRA_WP) score -= 4;
+    }
+
+    for (const t of slotRange(start, end)) {
+      const c = getCounts(coverage, t);
+      const next = { ...c, [wp]: c[wp] + 1 };
+
+      // 기본 배치 우선: 2F 메인 2명(엘베/출차 각1), 3F 최소 2명
+      score += (1 - Math.min(next['2F 엘베'], 1)) * 10;
+      score += (1 - Math.min(next['2F 출차'], 1)) * 10;
+      score += Math.max(0, 2 - next['3F']) * 8;
+
+      // 3F 기본 2명까지 우선 채우기 / 추가 1명 허용(최대 3)
+      if (wp === '3F' && c['3F'] < 2) score -= 3;
+      if ((wp === '2F 엘베' || wp === '2F 출차') && c[wp] < 1) score -= 4;
+
+      // 보조/카트는 별도 자리이지만, 메인 자리와 3F 최소 충족 전에는 후순위
+      if (wp === EXTRA_WP_3F) {
+        if (next['2F 엘베'] < 1 || next['2F 출차'] < 1 || next['3F'] < 2) score += 90;
+        if (c['3F'] < 3) score += 25;
+        score += 8;
+      }
+      if (wp === ASSIST_WP) {
+        if (next['2F 엘베'] < 1 || next['2F 출차'] < 1 || next['3F'] < 2) score += 70;
+        score += 10;
+      }
+      if (wp === EXTRA_WP) {
+        if (next['2F 엘베'] < 1 || next['2F 출차'] < 1 || next['3F'] < 2) score += 100;
+        // 3F 추가 여유 있으면 3F를 더 우선
+        if (c['3F'] < 3) score += 40;
+        score += 6;
+      }
+    }
+
+    return score;
+  }
+
+  function assignCoverage(worker, wp, start, end, coverage) {
+    for (const t of slotRange(start, end)) getCounts(coverage, t)[wp] += 1;
+    if (worker && worker.placeCounts) worker.placeCounts[wp] = (worker.placeCounts[wp] || 0) + 1;
+    if (worker && !worker.firstAssignedWp) {
+      worker.firstAssignedWp = wp;
+      if (worker.group === '마감조' && worker._firstWpState && worker._firstWpState.closeCounts) {
+        worker._firstWpState.closeCounts[wp] = (worker._firstWpState.closeCounts[wp] || 0) + 1;
+      }
+    }
+  }
+
+  function chooseWorkplace(worker, start, end, coverage, rotationCtx, rng) {
+    const isFirstAssignment = !worker.firstAssignedWp;
+    let candidates = WORKPLACES
+      .map(wp => ({ wp, score: workplaceScore(worker, wp, start, end, coverage, rotationCtx) }))
+      .filter(x => Number.isFinite(x.score));
+
+    // 첫 배정은 모든 근무자에게 카트 내림 금지
+    if (isFirstAssignment) {
+      candidates = candidates.filter(function(x) { return x.wp !== EXTRA_WP; });
+    } else {
+      // 카트 내림은 메인+3F 자리가 가능한 경우 후순위
+      const nonCart = candidates.filter(function(x) { return x.wp !== EXTRA_WP; });
+      if (nonCart.length) candidates = nonCart;
+    }
+
+    // 마감조 첫 배정은 엘베/출차/3F를 가능한 범위에서 균형 분배
+    if (isFirstAssignment && worker.group === '마감조' && candidates.length) {
+      const closeCounts = (worker._firstWpState && worker._firstWpState.closeCounts) || {};
+      const mainCandidates = candidates.filter(function(x) { return x.wp === '2F 엘베' || x.wp === '2F 출차' || x.wp === '3F'; });
+      if (mainCandidates.length) {
+        const minCount = Math.min.apply(null, mainCandidates.map(function(x) { return closeCounts[x.wp] || 0; }));
+        candidates = mainCandidates.filter(function(x) { return (closeCounts[x.wp] || 0) === minCount; });
+      }
+    }
+
+    if (!candidates.length) return null;
+    const ordered = randomizeEqualCandidates(candidates, function(c) { return c.score; }, rng, 0.0001);
+    const wp = ordered[0].wp;
+    assignCoverage(worker, wp, start, end, coverage);
+    return wp;
+  }
+
+  function chooseWorkAssignment(worker, start, gapEnd, coverage, rotationCtx, rng) {
+    const remain = gapEnd - start;
+    const maxDur = Math.min(60, remain);
+    const candidates = [];
+    const isFirstAssignment = !worker.firstAssignedWp;
+
+    for (let duration = maxDur; duration >= 30; duration -= 5) {
+      const leftover = remain - duration;
+      if (!(leftover === 0 || leftover >= 30)) continue;
+
+      for (const wp of WORKPLACES) {
+        if (isFirstAssignment && wp === EXTRA_WP) continue;
+        const isFixed60Wp = FIXED_60_WPS.indexOf(wp) !== -1;
+        if (isFixed60Wp && duration !== 60) continue;
+        const score = workplaceScore(worker, wp, start, start + duration, coverage, rotationCtx);
+        if (!Number.isFinite(score)) continue;
+        const targetDuration = DEFAULT_WORK_BLOCK_BY_WP[wp] || 60;
+        const durationGap = Math.abs(targetDuration - duration);
+        const isFlexibleWp = FIXED_60_WPS.indexOf(wp) === -1;
+        const durationPriorityCost = durationGap * (isFlexibleWp ? 18 : 120);
+        const exactMatchBonus = durationGap === 0 ? (isFlexibleWp ? -18 : -60) : 0;
+        const isFullHourPreferred = FIXED_60_WPS.indexOf(wp) !== -1 && duration === 60;
+        candidates.push({
+          wp,
+          duration,
+          baseScore: score,
+          durationPriorityCost,
+          targetDuration,
+          isFlexibleWp,
+          isFullHourPreferred,
+          score: (score * 1000) + durationPriorityCost + exactMatchBonus - (duration / 1000)
+        });
+      }
+    }
+
+    if (!candidates.length) return null;
+
+    const nonCart = candidates.filter(function(x) { return x.wp !== EXTRA_WP; });
+    let filtered = isFirstAssignment ? nonCart : (nonCart.length ? nonCart : candidates);
+
+    if (!filtered.length) return null;
+
+    // 마감조 첫 배정은 엘베/출차/3F를 가능한 범위에서 균형 분배
+    if (isFirstAssignment && worker.group === '마감조') {
+      const closeCounts = (worker._firstWpState && worker._firstWpState.closeCounts) || {};
+      const mainCandidates = filtered.filter(function(x) { return x.wp === '2F 엘베' || x.wp === '2F 출차' || x.wp === '3F'; });
+      if (mainCandidates.length) {
+        const minCount = Math.min.apply(null, mainCandidates.map(function(x) { return closeCounts[x.wp] || 0; }));
+        filtered = mainCandidates.filter(function(x) { return (closeCounts[x.wp] || 0) === minCount; });
+      }
+    }
+
+    // 2F 출차/2F 엘베/3F는 어쩔 수 없는 구간이 아니면 60분만 사용
+    const fixed60Candidates = filtered.filter(function(x) { return FIXED_60_WPS.indexOf(x.wp) !== -1 && x.duration === 60; });
+    if (fixed60Candidates.length) {
+      filtered = fixed60Candidates;
+    } else {
+      const shortestGap = filtered.reduce(function(minGap, x) {
+        return Math.min(minGap, Math.abs((DEFAULT_WORK_BLOCK_BY_WP[x.wp] || 60) - x.duration));
+      }, Number.POSITIVE_INFINITY);
+      filtered = filtered.filter(function(x) {
+        return Math.abs((DEFAULT_WORK_BLOCK_BY_WP[x.wp] || 60) - x.duration) === shortestGap;
+      });
+    }
+
+    const ordered = randomizeEqualCandidates(filtered, function(c) {
+      return c.score;
+    }, rng, 0.75);
+
+    const picked = ordered[0];
+    assignCoverage(worker, picked.wp, start, start + picked.duration, coverage);
+    return picked;
+  }
+
+  function tryExtendPrevWork(worker, prevSeg, extendMin, coverage) {
+    if (!prevSeg || prevSeg.type !== 'work' || extendMin <= 0) return 0;
+    const currentLen = prevSeg.end - prevSeg.start;
+    if (currentLen >= 60) return 0;
+
+    const addable = Math.min(extendMin, 60 - currentLen);
+    if (addable <= 0) return 0;
+
+    // 확장 시에도 상한 검증 필수 (이전 버그 수정)
+    if (!canAssignToWp(prevSeg.label, prevSeg.end, prevSeg.end + addable, coverage)) return 0;
+    assignCoverage(worker, prevSeg.label, prevSeg.end, prevSeg.end + addable, coverage);
+    prevSeg.end += addable;
+    return addable;
+  }
+
+  function chooseForcedWorkplace(worker, start, end, coverage) {
+    const isFirstAssignment = !worker.firstAssignedWp;
+    const counts = getCounts(coverage, start);
+    let candidates = WORKPLACES.slice();
+    const duration = end - start;
+
+    if (isFirstAssignment) {
+      candidates = candidates.filter(function(wp) { return wp !== EXTRA_WP; });
+    }
+
+    if (duration !== 60) {
+      const flexOnly = candidates.filter(function(wp) { return FIXED_60_WPS.indexOf(wp) === -1; });
+      if (flexOnly.length) candidates = flexOnly;
+    }
+
+    const feasible = candidates.filter(function(wp) { return canAssignToWp(wp, start, end, coverage); });
+    if (feasible.length) {
+      candidates = feasible;
+    } else if (isFirstAssignment) {
+      const firstSafe = candidates.filter(function(wp) { return wp !== '3F' && wp !== EXTRA_WP_3F; });
+      if (firstSafe.length) candidates = firstSafe;
+    }
+
+    candidates.sort(function(a, b) {
+      function forcedScore(wp) {
+        let score = 0;
+        const cap = WP_CAPS[wp];
+        const used = counts[wp] || 0;
+        const overflow = Number.isFinite(cap) ? Math.max(0, (used + 1) - cap) : 0;
+        score += overflow * 5000;
+        if (isFirstAssignment && wp === EXTRA_WP) score += 1200;
+        if (duration !== 60 && FIXED_60_WPS.indexOf(wp) !== -1) score += 8000;
+        if (wp === '3F' && overflow > 0) score += 400;
+        if (wp === EXTRA_WP_3F && overflow > 0) score += 400;
+        if (wp === ASSIST_WP) score -= 40;
+        if (wp === EXTRA_WP) score -= 25;
+        if (wp === EXTRA_WP_3F) score -= 18;
+        if (wp === '3F') score -= 10;
+        if (wp === '2F 엘베' || wp === '2F 출차') score += 10;
+        if (worker.firstAssignedWp && wp === worker.firstAssignedWp) score += 20;
+        return score;
+      }
+      return forcedScore(a) - forcedScore(b);
+    });
+
+    const picked = candidates[0] || ASSIST_WP;
+    assignCoverage(worker, picked, start, end, coverage);
+    return picked;
+  }
+
+  function fillWork(worker, coverage, rng) {
+    worker.segments.sort((a, b) => a.start - b.start);
+    const occupied = worker.segments.slice();
+    let cursor = worker.startMin;
+
+    function placeGapWork(gapStart, gapEnd) {
+      let t = gapStart;
+      while (t < gapEnd) {
+        const remain = gapEnd - t;
+
+        if (remain < 30) {
+          const prev = worker.segments
+            .filter(s => s.type === 'work' && s.end === t)
+            .sort((a, b) => a.start - b.start)
+            .slice(-1)[0];
+          const extended = tryExtendPrevWork(worker, prev, remain, coverage);
+          if (extended > 0) {
+            t += extended;
+            continue;
+          }
+          const forcedWp = chooseForcedWorkplace(worker, t, gapEnd, coverage);
+          addSegment(worker, t, gapEnd, 'work', forcedWp);
+          worker.warnings.push(minToTime(t) + '~' + minToTime(gapEnd) + ' 강제 배정(' + forcedWp + ')');
+          break;
+        }
+
+        const rotationCtx = getPrevContiguousWorkInfo(worker, t);
+        const picked = chooseWorkAssignment(worker, t, gapEnd, coverage, rotationCtx, rng);
+        if (!picked) {
+          const fallbackEnd = Math.min(gapEnd, t + Math.min(Math.max(remain, 30), 60));
+          const forcedWp = chooseForcedWorkplace(worker, t, fallbackEnd, coverage);
+          addSegment(worker, t, fallbackEnd, 'work', forcedWp);
+          worker.warnings.push(minToTime(t) + '~' + minToTime(fallbackEnd) + ' 강제 배정(' + forcedWp + ')');
+          t = fallbackEnd;
+          continue;
+        }
+
+        addSegment(worker, t, t + picked.duration, 'work', picked.wp);
+        t += picked.duration;
+      }
+    }
+
+    for (const seg of occupied) {
+      if (cursor < seg.start) placeGapWork(cursor, seg.start);
+      cursor = Math.max(cursor, seg.end);
+    }
+    if (cursor < worker.endMin) placeGapWork(cursor, worker.endMin);
+
+    worker.segments.sort((a, b) => a.start - b.start);
+  }
+
+  function buildTimeline(workers) {
+    const minStart = Math.min.apply(null, workers.map(w => w.startMin));
+    const maxEnd = Math.max.apply(null, workers.map(w => w.endMin));
+    const rows = [];
+    for (let t = minStart; t < maxEnd; t += 5) rows.push({ time: minToTime(t), t, cells: {} });
+
+    // 성능 최적화: row마다 .find() 대신 워커별 포인터 사용
+    for (const w of workers) {
+      const segs = w.segments.slice().sort((a, b) => a.start - b.start);
+      let idx = 0;
+      for (const row of rows) {
+        if (row.t < w.startMin || row.t >= w.endMin) {
+          row.cells[w.id] = null;
+          continue;
+        }
+        while (idx < segs.length && segs[idx].end <= row.t) idx += 1;
+        const seg = segs[idx] && segs[idx].start <= row.t && row.t < segs[idx].end ? segs[idx] : null;
+        row.cells[w.id] = seg || { type: 'idle', label: '빈시간' };
+      }
+    }
+    return rows;
+  }
+
+  function buildCoverageSummary(coverage, mealCoverage) {
+    const times = Object.keys(coverage).map(Number).sort((a, b) => a - b);
+    const by15 = [];
+
+    for (const t of times) {
+      if (t % 15 !== 0) continue;
+      const slots = [t, t + 5, t + 10].map(x => coverage[x] || { '2F 엘베': 0, '2F 출차': 0, '3F': 0, '3F 카트 내림': 0, '2F 보조': 0, '2F 카트 내림': 0 });
+      const slotMeals = [t, t + 5, t + 10].map(x => mealCoverage[x] || 0);
+
+      const minElv = Math.min.apply(null, slots.map(s => s['2F 엘베']));
+      const minOut = Math.min.apply(null, slots.map(s => s['2F 출차']));
+      const maxElv = Math.max.apply(null, slots.map(s => s['2F 엘베']));
+      const maxOut = Math.max.apply(null, slots.map(s => s['2F 출차']));
+      const min3 = Math.min.apply(null, slots.map(s => s['3F']));
+      const max3 = Math.max.apply(null, slots.map(s => s['3F']));
+      const f3CartMin = Math.min.apply(null, slots.map(s => s['3F 카트 내림'] || 0));
+      const f3CartMax = Math.max.apply(null, slots.map(s => s['3F 카트 내림'] || 0));
+      const assistMin = Math.min.apply(null, slots.map(s => s['2F 보조'] || 0));
+      const assistMax = Math.max.apply(null, slots.map(s => s['2F 보조'] || 0));
+      const cartMin = Math.min.apply(null, slots.map(s => s['2F 카트 내림'] || 0));
+      const cartMax = Math.max.apply(null, slots.map(s => s['2F 카트 내림'] || 0));
+
+      const row = {
+        t,
+        time: minToTime(t),
+        elvMin: minElv,
+        outMin: minOut,
+        elvMax: maxElv,
+        outMax: maxOut,
+        f3Min: min3,
+        f3Max: max3,
+        f3CartMin,
+        f3CartMax,
+        assistMin,
+        assistMax,
+        cartMin,
+        cartMax,
+        mealMaxNonClose: Math.max.apply(null, slotMeals),
+        ok2F: (minElv >= 1 && minOut >= 1 && maxElv <= 1 && maxOut <= 1),
+        ok3F: (min3 >= 2 && max3 <= 3 && f3CartMax <= 3),
+        okMeal: (Math.max.apply(null, slotMeals) <= 2)
+      };
+      row.ok = row.ok2F && row.ok3F && row.okMeal;
+      by15.push(row);
+    }
+
+    const violations = by15.filter(r => !r.ok);
+    return { by15, violations };
+  }
+
+  function scheduleFingerprint(result) {
+    return (result.workers || []).map(function(w) {
+      const segs = (w.segments || []).slice().sort(function(a, b) { return a.start - b.start; }).map(function(s) {
+        return [s.start, s.end, s.type, s.label].join(':');
+      }).join('|');
+      return [w.startMin, w.name, segs].join('>');
+    }).join('||');
+  }
+
+  function buildScheduleOnce(workerInputs, rng, generationIndex) {
+    const workers = workerInputs.map(cloneWorker);
+    const indexedWorkers = workers.map(function(w, idx) { return { worker: w, idx: idx }; });
+    const ordered = randomizeEqualCandidates(indexedWorkers, function(entry) {
+      return (entry.worker.startMin * 100000) - (entry.worker.hours * 100) + entry.idx;
+    }, rng, 0.5);
+    const sortedWorkers = ordered.map(function(entry) { return entry.worker; });
+
+    const coverage = initCoverage();
+    const mealCoverage = {};
+    const meetingCounts = Object.fromEntries(FIXED_EVENTS.map(ev => [ev.label, 0]));
+    const globalWarnings = [];
+    const firstAssignmentState = { closeCounts: { '2F 엘베': 0, '2F 출차': 0, '3F': 0 } };
+    sortedWorkers.forEach(function(w) { w._firstWpState = firstAssignmentState; });
+
+    const openWorkers = randomizeEqualCandidates(
+      sortedWorkers.filter(function(w) { return w.group === '오픈조'; }).slice(),
+      function(w) { return Number(String(w.name).replace(/[^0-9]/g, '')) || 0; },
+      rng,
+      1000
+    );
+    const openMealPlan = new Map();
+    const openMealBase = timeToMin('11:30');
+    openWorkers.forEach(function(w, idx) { openMealPlan.set(w.id, openMealBase + (idx * 60)); });
+    if (openWorkers.length !== 2) {
+      globalWarnings.push('오픈조는 2명 기준입니다. 현재 ' + openWorkers.length + '명 등록됨');
+    }
+
+    for (const w of sortedWorkers) {
+      insertFixedMeeting(w, meetingCounts, rng);
+      const preferredMeal = openMealPlan.has(w.id) ? openMealPlan.get(w.id) : null;
+      chooseMeal(w, mealCoverage, preferredMeal, rng);
+      chooseBreaks(w, rng);
+      fillWork(w, coverage, rng);
+      if (preferredMeal != null) {
+        w.warnings.push('오픈조 식사 기준 ' + minToTime(preferredMeal));
+      }
+      w.warnings.push('종료 ' + minToTime(w.endMin) + ' (식사 1시간 별도)');
+    }
+
+    const closeFirstCounts = firstAssignmentState.closeCounts;
+    const closeFirstValues = [closeFirstCounts['2F 엘베'] || 0, closeFirstCounts['2F 출차'] || 0, closeFirstCounts['3F'] || 0];
+    const closeFirstSpread = closeFirstValues.length ? (Math.max.apply(null, closeFirstValues) - Math.min.apply(null, closeFirstValues)) : 0;
+    globalWarnings.unshift('첫 배정 규칙 적용: 모든 근무자 첫 근무지는 카트 내림 제외 · 마감조 첫 근무지는 엘베/출차/3F 균등 분배 우선');
+    if (sortedWorkers.some(function(w) { return !w.firstAssignedWp; })) {
+      globalWarnings.push('일부 근무자는 첫 배정 검증 중 예외가 있어 강제 근무지 배정이 적용되었습니다.');
+    }
+    if (closeFirstSpread > 1) {
+      globalWarnings.push('마감조 첫 근무지 분배가 일부 시간대 제약으로 완전 균등하지 않을 수 있습니다. (엘베 ' + closeFirstCounts['2F 엘베'] + ' / 출차 ' + closeFirstCounts['2F 출차'] + ' / 3F ' + closeFirstCounts['3F'] + ')');
+    }
+
+    const mainPlaces60 = ['2F 엘베', '2F 출차', '3F'];
+    const normalizationFixes = normalizeProtectedPlaceChains(sortedWorkers, mainPlaces60);
+    const fixed60BlockFixes = normalizeFixed60PlaceDurations(sortedWorkers, FIXED_60_WPS);
+    const assignmentFixes = ensureFullWorkAssignment(sortedWorkers);
+    const placeCapFixes = normalizePlaceCapViolations(sortedWorkers, ['3F', '3F 카트 내림']);
+    const rebuiltState = rebuildDerivedState(sortedWorkers);
+    const timeline = buildTimeline(sortedWorkers);
+    const globalCounts = Object.fromEntries(WORKPLACES.map(function(p) {
+      return [p, sortedWorkers.reduce(function(n, w) { return n + (w.placeCounts[p] || 0); }, 0)];
+    }));
+    const coverageSummary = buildCoverageSummary(rebuiltState.coverage, rebuiltState.mealCoverage);
+    const mainPlace60Issues = validateMaxWorkPerPlace(sortedWorkers, mainPlaces60);
+    const fixed60BlockIssues = validateFixedDurationPlaces(sortedWorkers, FIXED_60_WPS);
+    const maxWorkIssues = validateMaxWorkPerPlace(sortedWorkers);
+    const placeCapIssues = validatePlaceCapViolations(rebuiltState.coverage, ['3F', '3F 카트 내림']);
+
+    if (normalizationFixes.length) {
+      globalWarnings.unshift('자동 수정: 2F 출차·2F 엘베·3F 60분 초과 구간 ' + normalizationFixes.length + '건을 다른 근무지로 재배정했습니다.');
+      globalWarnings.push('자동 재배정 예시: ' + normalizationFixes.slice(0, 5).join(', ') + (normalizationFixes.length > 5 ? ' ...' : ''));
+    }
+    if (fixed60BlockFixes.length) {
+      globalWarnings.unshift('자동 수정: 2F 출차·2F 엘베·3F의 60분 미만/초과 블록 ' + fixed60BlockFixes.length + '건을 보조·카트 계열로 재배정했습니다.');
+      globalWarnings.push('고정 60분 재배정 예시: ' + fixed60BlockFixes.slice(0, 5).join(', ') + (fixed60BlockFixes.length > 5 ? ' ...' : ''));
+    }
+
+    if (assignmentFixes.length) {
+      globalWarnings.unshift('자동 보정: 미배정 구간 ' + assignmentFixes.length + '건에 근무지를 다시 채웠습니다. 식사·휴식·회의는 유지됩니다.');
+    }
+
+    if (placeCapFixes.length) {
+      globalWarnings.unshift('자동 수정: 3F/3F 카트내림 상한 초과 구간 ' + placeCapFixes.length + '건을 재배정했습니다.');
+      globalWarnings.push('3F 계열 재배정 예시: ' + placeCapFixes.slice(0, 5).join(', ') + (placeCapFixes.length > 5 ? ' ...' : ''));
+    }
+
+    if (placeCapIssues.length) {
+      globalWarnings.push('3F/3F 카트내림 인원 상한 위반 ' + placeCapIssues.length + '건 (예: ' + placeCapIssues.slice(0, 5).join(', ') + (placeCapIssues.length > 5 ? ' ...' : '') + ')');
+    } else {
+      globalWarnings.unshift('검토 완료: 3F는 최대 3명, 3F 카트내림은 최대 3명으로 유지됩니다.');
+    }
+
+    if (mainPlace60Issues.length) {
+      globalWarnings.push('2F 출차·2F 엘베·3F 60분 상한 위반 ' + mainPlace60Issues.length + '건 (예: ' + mainPlace60Issues.slice(0, 5).join(', ') + (mainPlace60Issues.length > 5 ? ' ...' : '') + ')');
+    } else {
+      globalWarnings.unshift('검토 완료: 2F 출차·2F 엘베·3F는 60분을 넘지 않도록 유지됩니다.');
+    }
+    if (fixed60BlockIssues.length) {
+      globalWarnings.push('2F 출차·2F 엘베·3F 60분 고정 위반 ' + fixed60BlockIssues.length + '건 (예: ' + fixed60BlockIssues.slice(0, 5).join(', ') + (fixed60BlockIssues.length > 5 ? ' ...' : '') + ')');
+    } else {
+      globalWarnings.unshift('검토 완료: 2F 출차·2F 엘베·3F는 60분 블록만 사용하고, 보조·2F카트·3F카트가 잔여 시간을 흡수합니다.');
+    }
+
+    if (maxWorkIssues.length) {
+      globalWarnings.push('전체 근무지 기준 최대 60분 규칙 위반 ' + maxWorkIssues.length + '건 (예: ' + maxWorkIssues.slice(0, 5).join(', ') + (maxWorkIssues.length > 5 ? ' ...' : '') + ')');
+    } else {
+      globalWarnings.unshift('한 근무지 최대 근무시간 60분 규칙을 적용했습니다.');
+    }
+
+    const unassignedMinutes = countUnassignedMinutes(sortedWorkers);
+    if (unassignedMinutes > 0) {
+      globalWarnings.push('미배정 근무시간 ' + unassignedMinutes + '분이 남아 있습니다.');
+    } else {
+      globalWarnings.unshift('검토 완료: 식사·휴식·회의를 유지하면서 근무시간 내 미배정 구간이 없도록 보정했습니다.');
+    }
+
+    if (coverageSummary.violations.length) {
+      const sample = coverageSummary.violations.slice(0, 8)
+        .map(function(v) { return v.time + ' [2F:' + v.elvMin + '/' + v.outMin + ', 3F:' + v.f3Min + '~' + v.f3Max + ', 3F카트:' + v.f3CartMin + '~' + v.f3CartMax + ', 보조:' + v.assistMin + '~' + v.assistMax + ', 2F카트:' + v.cartMin + '~' + v.cartMax + ', 식사:' + v.mealMaxNonClose + ']'; })
+        .join(', ');
+      globalWarnings.push('규칙 미충족 구간 ' + coverageSummary.violations.length + '개 (예: ' + sample + (coverageSummary.violations.length > 8 ? ' ...' : '') + ')');
+    }
+
+    const groupCounts = {
+      '오픈조': sortedWorkers.filter(function(w) { return w.group === '오픈조'; }).length,
+      '중간조': sortedWorkers.filter(function(w) { return w.group === '중간조'; }).length,
+      '마감조': sortedWorkers.filter(function(w) { return w.group === '마감조'; }).length
+    };
+
+    const result = { workers: sortedWorkers, timeline: timeline, globalCounts: globalCounts, coverageSummary: coverageSummary, meetingCounts: meetingCounts, groupCounts: groupCounts, globalWarnings: globalWarnings, mainPlace60Issues: mainPlace60Issues, generationIndex: generationIndex, seed: rng.seed };
+    result.fingerprint = scheduleFingerprint(result);
+    return result;
+  }
+
+  function generateSchedule(workerInputs) {
+    const maxAttempts = 12;
+    let best = null;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const baseSeed = createSeed() ^ ((attempt + 1) * 2654435761);
+      const generationIndex = Date.now().toString(36) + '_' + baseSeed.toString(36) + '_' + attempt;
+      const rng = createRng(baseSeed);
+      const candidate = buildScheduleOnce(workerInputs, rng, generationIndex);
+      if (!best) best = candidate;
+      if (!lastScheduleFingerprint || candidate.fingerprint !== lastScheduleFingerprint) {
+        best = candidate;
+        break;
+      }
+    }
+    if (best.fingerprint === lastScheduleFingerprint) {
+      best.globalWarnings.push('규칙 범위 안에서 직전 결과와 다른 배치를 찾지 못해 같은 결과가 유지될 수 있습니다.');
+    } else {
+      best.globalWarnings.unshift('조회마다 규칙을 지키는 범위에서 다른 배치를 우선 탐색했습니다.');
+    }
+    lastScheduleFingerprint = best.fingerprint;
+    return best;
+  }
+
+
+
+  function parseDateInput(dateStr) {
+    const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(String(dateStr || ''));
+    if (!m) return null;
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  }
+
+  function formatDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+  }
+
+  function weekdayName(day) {
+    return ['일', '월', '화', '수', '목', '금', '토'][day];
+  }
+
+  const DEFAULT_MIDDLE_SHIFT_CONFIG = {
+    1: { times: ['10:30'] },
+    2: { times: ['10:30'] },
+    3: { times: ['10:30'] },
+    4: { times: ['10:30'] },
+    5: { times: ['12:30'] },
+    6: { times: ['10:30'] },
+    0: { times: ['10:30'] }
+  };
+
+  function cloneMiddleShiftConfig() {
+    const out = {};
+    Object.keys(DEFAULT_MIDDLE_SHIFT_CONFIG).forEach(function(key) {
+      out[key] = { times: DEFAULT_MIDDLE_SHIFT_CONFIG[key].times.slice(), count: DEFAULT_MIDDLE_SHIFT_CONFIG[key].times.length };
+    });
+    return out;
+  }
+
+  function normalizeMiddleShiftConfig(config) {
+    const out = cloneMiddleShiftConfig();
+    if (!config || typeof config !== 'object') return out;
+    Object.keys(out).forEach(function(key) {
+      const item = config[key] || config[Number(key)] || {};
+      let times = [];
+      if (Array.isArray(item.times)) {
+        times = item.times.map(function(v) { return String(v || '').trim(); }).filter(function(v) { return /^[0-2][0-9]:[0-5][0-9]$/.test(v); });
+      } else {
+        const count = Number(item.count);
+        const startTime = String(item.startTime || '').trim();
+        if (Number.isFinite(count) && count >= 1) {
+          const safeStart = /^[0-2][0-9]:[0-5][0-9]$/.test(startTime) ? startTime : (out[key].times[0] || '10:30');
+          times = Array.from({ length: Math.min(10, Math.round(count)) }, function() { return safeStart; });
+        }
+      }
+      if (times.length) out[key].times = times.slice(0, 10);
+      out[key].count = out[key].times.length;
+    });
+    return out;
+  }
+
+  function middleMealLabel(startTimes) {
+    const times = Array.isArray(startTimes) ? startTimes : [startTimes];
+    return times.map(function(startTime, idx) {
+      if (!/^[0-2][0-9]:[0-5][0-9]$/.test(String(startTime || ''))) return '중간' + (idx + 1) + ' 출근 후 3:00~3:30';
+      const startMin = timeToMin(startTime);
+      return '중간' + (idx + 1) + ' ' + minToTime(startMin + 180) + '~' + minToTime(startMin + 210);
+    }).join(' / ');
+  }
+
+  function middleConfigSummary(config) {
+    const safe = normalizeMiddleShiftConfig(config);
+    return [1, 2, 3, 4, 5, 6, 0].map(function(day) {
+      const item = safe[day];
+      return weekdayName(day) + ' ' + item.times.map(function(t, idx) { return '중간' + (idx + 1) + ' ' + t; }).join(', ');
+    });
+  }
+
+  function closingRuleForDate(date, weekIndex, middleConfig) {
+    const day = date.getDay();
+    let closeBase;
+    if (day === 6) closeBase = { count: 6, startTime: '13:50', mealTime: '17:00', dayName: '토' };
+    else if (day === 0) closeBase = { count: 5, startTime: '13:50', mealTime: '17:00', dayName: '일' };
+    else if (day === 5) closeBase = { count: 4, startTime: '13:50', mealTime: '17:00', dayName: '금' };
+    else closeBase = { count: 4, startTime: '13:30', mealTime: '17:00', dayName: weekdayName(day) };
+
+    const safeMiddle = normalizeMiddleShiftConfig(middleConfig);
+    const middleBase = safeMiddle[day];
+    const middleTimes = (middleBase.times || []).slice();
+    const middleCount = middleTimes.length;
+    const middleStart = middleTimes.join(' / ');
+    const middleMeal = middleMealLabel(middleTimes);
+
+    const groups = [
+      {
+        name: '오픈조',
+        count: 2,
+        startTime: '08:30',
+        mealTime: '11:30 / 12:30',
+        slots: ['08:30 출근자 1', '08:30 출근자 2'],
+        members: [
+          { name: '오픈1', startTime: '08:30', hours: 8 },
+          { name: '오픈2', startTime: '08:30', hours: 8 }
+        ]
+      },
+      {
+        name: '중간조',
+        count: middleCount,
+        startTime: middleStart,
+        mealTime: middleMeal,
+        slots: middleTimes.map(function(start, idx) { return start + ' 출근자 ' + (idx + 1); }),
+        members: middleTimes.map(function(start, idx) { return { name: '중간' + (idx + 1), startTime: start, hours: 8 }; })
+      },
+      {
+        name: '마감조',
+        count: closeBase.count,
+        startTime: closeBase.startTime,
+        mealTime: closeBase.mealTime,
+        slots: Array.from({ length: closeBase.count }, function(_, idx) { return closeBase.startTime + ' 출근자 ' + (idx + 1); }),
+        members: Array.from({ length: closeBase.count }, function(_, idx) { return { name: '마감' + (idx + 1), startTime: closeBase.startTime, hours: 8 }; })
+      }
+    ];
+
+    return {
+      dayName: closeBase.dayName,
+      groups,
+      count: groups.reduce(function(sum, g) { return sum + g.count; }, 0),
+      openCount: 2,
+      closeCount: closeBase.count,
+      middleCount: middleCount,
+      startTime: groups.map(function(g) { return g.name + ' ' + g.startTime; }).join(' · '),
+      mealTime: groups.map(function(g) { return g.name + ' ' + g.mealTime; }).join(' · '),
+      slots: groups.reduce(function(arr, g) { return arr.concat(g.slots); }, []),
+      displayStart: groups.map(function(g) { return g.name + ' ' + g.startTime; }).join(' · '),
+      displayMeal: groups.map(function(g) { return g.name + ' ' + g.mealTime; }).join(' · ')
+    };
+  }
+
+  function buildDayWorkersFromGroups(groups, dateStr) {
+    const workers = [];
+    (groups || []).forEach(function(group) {
+      (group.members || []).forEach(function(member, idx) {
+        workers.push({
+          id: dateStr + '_' + group.name + '_' + (idx + 1),
+          name: member.name,
+          startTime: member.startTime,
+          hours: member.hours || 8
+        });
+      });
+    });
+    return workers;
+  }
+
+  function startOfWeekMonday(baseDate) {
+    const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+    const day = date.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    date.setDate(date.getDate() + diff);
+    return date;
+  }
+
+  function generateClosing4WeekTable(startDateStr, middleConfig) {
+    const parsed = parseDateInput(startDateStr);
+    const startDate = parsed ? startOfWeekMonday(parsed) : startOfWeekMonday(new Date());
+    const weeks = [];
+    let totalSlots = 0;
+    let totalOpenSlots = 0;
+    let totalCloseSlots = 0;
+    let totalMiddleSlots = 0;
+    const safeMiddleConfig = normalizeMiddleShiftConfig(middleConfig);
+    let warnings = [];
+    if (parsed && parsed.getDay() !== 1) warnings.push('입력한 날짜를 포함한 주의 월요일(' + formatDate(startDate) + ')부터 4주 표를 생성했습니다.');
+    warnings.push('오픈조는 매일 2명(08:30)으로 고정하고 식사는 11:30 / 12:30로 순차 반영했습니다.');
+    warnings.push('중간조는 요일별/인원별 출근시간 설정을 반영합니다: ' + middleConfigSummary(safeMiddleConfig).join(' · '));
+    warnings.push('마감조는 월~목 13:30 / 금~일 13:50 출근, 식사 17:00을 반영했습니다.');
+
+    for (let w = 0; w < 4; w++) {
+      const weekIndex = w + 1;
+      const days = [];
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + (w * 7) + i);
+        const rule = closingRuleForDate(date, weekIndex, safeMiddleConfig);
+        const dateStr = formatDate(date);
+        const dayWorkers = buildDayWorkersFromGroups(rule.groups, dateStr);
+        const detailSchedule = generateSchedule(dayWorkers);
+        totalSlots += rule.count;
+        totalOpenSlots += rule.openCount;
+        totalCloseSlots += rule.closeCount;
+        totalMiddleSlots += rule.middleCount;
+        days.push({
+          weekIndex,
+          date,
+          dateStr: dateStr,
+          dayName: rule.dayName,
+          startTime: rule.startTime,
+          mealTime: rule.mealTime,
+          count: rule.count,
+          openCount: rule.openCount,
+          closeCount: rule.closeCount,
+          middleCount: rule.middleCount,
+          groups: rule.groups,
+          slots: rule.slots,
+          detailSchedule: detailSchedule,
+          displayStart: rule.displayStart,
+          displayMeal: rule.displayMeal
+        });
+      }
+      weeks.push({ weekIndex, days });
+    }
+
+    return { startDate: formatDate(startDate), weeks, totalSlots, totalOpenSlots, totalCloseSlots, totalMiddleSlots, warnings, middleConfigSummary: middleConfigSummary(safeMiddleConfig), middleConfig: safeMiddleConfig };
+  }
+
+  return { generateSchedule, generateClosing4WeekTable };
+})();
+
+
+window.UI = (() => {
+  const { makeStartOptions, minToTime } = window.Utils;
+
+  function initStartOptions(selectEl) {
+    selectEl.innerHTML = makeStartOptions().map(t => '<option value="' + t + '">' + t + '</option>').join('');
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function renderWorkerList(container, workers, onRemove) {
+    container.innerHTML = '';
+    if (!workers.length) {
+      const empty = document.createElement('div');
+      empty.className = 'muted small';
+      empty.textContent = '등록된 근무자가 없습니다.';
+      container.appendChild(empty);
+      return;
+    }
+
+    workers.forEach(w => {
+      const div = document.createElement('div');
+      div.className = 'worker-item';
+      div.innerHTML =
+        '<div>' +
+          '<div><strong>' + escapeHtml(w.name) + '</strong><span class="tag">' + escapeHtml(w.hours) + 'h</span></div>' +
+          '<div class="meta">시작 ' + escapeHtml(w.startTime) + (w.group ? (' · ' + escapeHtml(w.group)) : '') + '</div>' +
+        '</div>' +
+        '<button type="button" class="secondary" data-id="' + escapeHtml(w.id) + '">삭제</button>';
+      var removeBtn = div.querySelector('button');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function(ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          onRemove(w.id);
+        });
+      }
+      container.appendChild(div);
+    });
+  }
+
+  function cellClass(type) {
+    return type === 'work' ? 'cell-work' :
+      type === 'break' ? 'cell-break' :
+      type === 'meal' ? 'cell-meal' :
+      type === 'meeting' ? 'cell-meeting' :
+      type === 'idle' ? 'cell-empty' : '';
+  }
+
+  function getTypeVisual(type) {
+    if (type === 'work') return { icon: '🛠️', name: '근무', badgeClass: 'badge-work' };
+    if (type === 'break') return { icon: '☕', name: '휴식', badgeClass: 'badge-break' };
+    if (type === 'meal') return { icon: '🍽️', name: '식사', badgeClass: 'badge-meal' };
+    if (type === 'meeting') return { icon: '🦺', name: '안전회의', badgeClass: 'badge-meeting' };
+    return { icon: '•', name: '기타', badgeClass: 'badge-default' };
+  }
+
+  function isCartWorkLabel(label) {
+    return label === '2F 카트 내림';
+  }
+
+  function is3FCartWorkLabel(label) {
+    return label === '3F 카트 내림';
+  }
+
+  function isAssistWorkLabel(label) {
+    return label === '2F 보조';
+  }
+
+  function segmentClass(type, label) {
+    let cls = cellClass(type);
+    if (type === 'work' && is3FCartWorkLabel(label)) cls += ' cell-f3cart';
+    else if (type === 'work' && isCartWorkLabel(label)) cls += ' cell-cart';
+    if (type === 'work' && isAssistWorkLabel(label)) cls += ' cell-assist';
+    return cls;
+  }
+
+  function renderTypeBadge(type, label) {
+    const v = getTypeVisual(type);
+    let extra = '';
+    if (type === 'work' && is3FCartWorkLabel(label)) extra = ' badge-f3cart';
+    else if (type === 'work' && isCartWorkLabel(label)) extra = ' badge-cart';
+    else if (type === 'work' && isAssistWorkLabel(label)) extra = ' badge-assist';
+    return '<span class="type-badge ' + v.badgeClass + extra + '">' + v.icon + ' ' + escapeHtml(v.name) + '</span>';
+  }
+
+  function renderDesktopCellLabel(seg) {
+    const v = getTypeVisual(seg.type);
+    const label = seg.label || v.name;
+    return '<div class="cell-wrap">' +
+      '<span class="cell-emoji">' + v.icon + '</span>' +
+      '<span class="cell-label">' + escapeHtml(label) + '</span>' +
+    '</div>';
+  }
+
+  function renderLegend() {
+    return '<div class="legend-row">' +
+      '<span class="legend-item">' + renderTypeBadge('work') + '</span>' +
+      '<span class="legend-item"><span class="type-badge badge-assist">🧩 2F 보조</span></span>' +
+      '<span class="legend-item"><span class="type-badge badge-cart">🛒 2F 카트 내림</span></span>' +
+      '<span class="legend-item"><span class="type-badge badge-f3cart">🛗 3F 카트 내림</span></span>' +
+      '<span class="legend-item">' + renderTypeBadge('meal') + '</span>' +
+      '<span class="legend-item">' + renderTypeBadge('break') + '</span>' +
+      '<span class="legend-item">' + renderTypeBadge('meeting') + '</span>' +
+    '</div>';
+  }
+
+  function reducedTimeline(timeline) {
+    const rows = [];
+    for (let i = 0; i < timeline.length; i += 3) rows.push(timeline[i]);
+    return rows;
+  }
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function fmtRange(startMin, endMin) {
+    return pad2(Math.floor(startMin / 60)) + ':' + pad2(startMin % 60) + ' ~ ' + pad2(Math.floor(endMin / 60)) + ':' + pad2(endMin % 60);
+  }
+
+  function buildMergedBlocks(worker) {
+    const segs = (worker && worker.segments ? worker.segments : []).slice().sort((a, b) => a.start - b.start);
+    if (!segs.length) return [];
+    const blocks = [];
+    for (let i = 0; i < segs.length; i++) {
+      const s = segs[i];
+      const prev = blocks.length ? blocks[blocks.length - 1] : null;
+      const sameAsPrev = prev && prev.type === s.type && prev.label === s.label && prev.end === s.start;
+      if (sameAsPrev) {
+        prev.end = s.end;
+        prev.minutes += (s.end - s.start);
+      } else {
+        blocks.push({ type: s.type, label: s.label, start: s.start, end: s.end, minutes: (s.end - s.start) });
+      }
+    }
+    return blocks;
+  }
+
+  function shortWorkLabel(label) {
+    if (!label) return '-';
+    if (label === '2F 엘베') return '2F엘베';
+    if (label === '2F 출차') return '2F출차';
+    if (label === '2F 보조') return '보조';
+    if (label === '2F 카트 내림') return '2F카트';
+    if (label === '3F 카트 내림') return '3F카트';
+    return label;
+  }
+
+  function workerQuickStats(blocks) {
+    const stat = { work: 0, meal: 0, break: 0, meeting: 0 };
+    for (const b of blocks) {
+      if (b.type === 'work') stat.work += b.minutes;
+      if (b.type === 'meal') stat.meal += b.minutes;
+      if (b.type === 'break') stat.break += b.minutes;
+      if (b.type === 'meeting') stat.meeting += b.minutes;
+    }
+    return stat;
+  }
+
+  function renderSimpleWorkerBoard(result) {
+    const workers = result.workers || [];
+    if (!workers.length) return '';
+
+    const cards = workers.map(function(w) {
+      const blocks = buildMergedBlocks(w);
+      const chips = blocks.map(function(b) {
+        const cls = 'chip ' + segmentClass(b.type, b.label);
+        const label = b.type === 'work' ? shortWorkLabel(b.label) : (b.label || getTypeVisual(b.type).name);
+        return '<div class="' + cls + '">' +
+          '<div class="chip-top"><span>' + renderTypeBadge(b.type, b.label) + '</span><span class="chip-time">' + escapeHtml(fmtRange(b.start, b.end)) + '</span></div>' +
+          '<div class="chip-main">' + escapeHtml(label) + '</div>' +
+          '</div>';
+      }).join('');
+
+      return '<div class="simple-worker-card">' +
+        '<div class="simple-head">' +
+          '<div><div class="name">' + escapeHtml(workerHeaderName(w)) + '</div><div class="meta">' + escapeHtml(workerHeaderMeta(w)) + '</div></div>' +
+        '</div>' +
+        '<div class="chip-list">' + chips + '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="simple-section">' +
+      '<div class="simple-title">출근시간별 핵심 스케줄</div>' +
+      '<div class="simple-worker-grid">' + cards + '</div>' +
+    '</div>';
+  }
+
+  function renderOpsOverview(result) {
+    const rows = (result.coverageSummary && result.coverageSummary.by15 ? result.coverageSummary.by15 : []);
+    if (!rows.length) return '';
+
+    const merged = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const key = [r.elvMin, r.outMin, r.f3Min, r.f3Max, r.f3CartMin, r.f3CartMax, r.assistMin, r.assistMax, r.cartMin, r.cartMax, r.mealMaxNonClose, r.ok].join('|');
+      const prev = merged.length ? merged[merged.length - 1] : null;
+      if (prev && prev.key === key && prev.end === r.t) {
+        prev.end = r.t + 15;
+      } else {
+        merged.push({
+          key,
+          start: r.t,
+          end: r.t + 15,
+          ok: r.ok,
+          main2f: r.elvMin + r.outMin,
+          f3: (r.f3Min === r.f3Max ? String(r.f3Min) : (r.f3Min + '~' + r.f3Max)),
+          f3cart: (r.f3CartMin === r.f3CartMax ? String(r.f3CartMin) : (r.f3CartMin + '~' + r.f3CartMax)),
+          assist: (r.assistMin === r.assistMax ? String(r.assistMin) : (r.assistMin + '~' + r.assistMax)),
+          cart: (r.cartMin === r.cartMax ? String(r.cartMin) : (r.cartMin + '~' + r.cartMax)),
+          meal: String(r.mealMaxNonClose)
+        });
+      }
+    }
+
+    const items = merged.slice(0, 28).map(m => {
+      return '<div class="ops-block ' + (m.ok ? '' : 'bad') + '">' +
+        '<div class="ops-time">' + escapeHtml(fmtRange(m.start, m.end)) + '</div>' +
+        '<div class="ops-lines">' +
+          '<span>2F ' + escapeHtml(String(m.main2f)) + '명</span>' +
+          '<span>3F ' + escapeHtml(m.f3) + '명</span>' +
+          '<span>3F카트 ' + escapeHtml(m.f3cart || 0) + '명</span>' +
+          '<span>보조 ' + escapeHtml(m.assist) + '명</span>' +
+          '<span>2F카트 ' + escapeHtml(m.cart) + '명</span>' +
+          '<span>식사 ' + escapeHtml(m.meal) + '명</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    const more = merged.length > 28 ? '<div class="muted small">외 ' + (merged.length - 28) + '개 구간은 상세 보기에서 확인</div>' : '';
+    return '<div class="simple-section">' +
+      '<div class="simple-title">시간대별 운영 요약</div>' +
+      '<div class="simple-sub muted">15분 단위를 연속 구간으로 병합한 간단표 · ' + BREAK_RULE_TEXT + '</div>' +
+      '<div class="ops-grid">' + items + '</div>' +
+      more +
+    '</div>';
+  }
+
+  function workerHeaderName(w) {
+    return (w && w.startTime ? (w.startTime + ' 출근자') : (w && w.name ? String(w.name) : '근무자'));
+  }
+
+  function workerHeaderMeta(w) {
+    const parts = [];
+    if (w && w.name) parts.push(String(w.name));
+    if (w && w.group) parts.push(String(w.group));
+    if (w && w.hours != null) parts.push(String(w.hours) + '시간');
+    return parts.join(' · ');
+  }
+
+
+  function buildCalendarMarkup(result, title, sub) {
+    if (!result || !result.workers || !result.workers.length) return '';
+
+    const workers = (result.workers || []).slice().sort(function(a, b) {
+      return (a.startMin - b.startMin) || String(a.name || '').localeCompare(String(b.name || ''));
+    });
+    const orderByStart = {};
+    workers.forEach(function(w) {
+      orderByStart[w.startTime] = (orderByStart[w.startTime] || 0) + 1;
+      w._sheetLabel = w.startTime + '-' + orderByStart[w.startTime];
+    });
+
+    const minStartRaw = Math.min.apply(null, workers.map(function(w) { return w.startMin; }));
+    const maxEndRaw = Math.max.apply(null, workers.map(function(w) { return w.endMin; }));
+    const minStart = Math.floor(minStartRaw / 30) * 30;
+    const maxEnd = Math.ceil(maxEndRaw / 30) * 30;
+    const slots = [];
+    for (let t = minStart; t < maxEnd; t += 30) slots.push({ start: t, end: t + 30 });
+
+    function segForSlot(worker, slot) {
+      if (!worker || !worker.segments) return null;
+      const mid = slot.start + 15;
+      let seg = worker.segments.find(function(s) { return s.start <= mid && mid < s.end; });
+      if (seg) return seg;
+      return worker.segments.find(function(s) { return s.start < slot.end && s.end > slot.start; }) || null;
+    }
+
+    function shortLabel(seg) {
+      if (!seg) return '';
+      if (seg.type === 'work') {
+        if (seg.label === '2F 엘베') return '엘베';
+        if (seg.label === '2F 출차') return '출차';
+        if (seg.label === '2F 보조') return '보조';
+        if (seg.label === '2F 카트 내림') return '2F카트';
+        if (seg.label === '3F 카트 내림') return '3F카트';
+        return seg.label || '근무';
+      }
+      if (seg.type === 'meal') return '식사';
+      if (seg.type === 'break') return '휴식';
+      if (seg.type === 'meeting') return '회의';
+      return '';
+    }
+
+    function cellKey(seg) {
+      if (!seg) return 'empty';
+      return [seg.type || '', seg.label || '', seg.id || ''].join('|');
+    }
+
+    const headTimes = slots.map(function(slot) {
+      return '<th class="sheet-time-col">' + escapeHtml(minToTime(slot.start)) + '</th>';
+    }).join('');
+
+    const bodyRows = workers.map(function(worker) {
+      const cells = [];
+      let idx = 0;
+      while (idx < slots.length) {
+        const seg = segForSlot(worker, slots[idx]);
+        const key = cellKey(seg);
+        let span = 1;
+        while (idx + span < slots.length && cellKey(segForSlot(worker, slots[idx + span])) === key) span += 1;
+        if (!seg) {
+          cells.push('<td class="sheet-cell sheet-empty" colspan="' + span + '">-</td>');
+        } else {
+          const cls = 'sheet-cell ' + segmentClass(seg.type, seg.label);
+          const label = shortLabel(seg);
+          const minutes = seg.end - seg.start;
+          const titleText = (seg.label || label || '') + ' · ' + fmtRange(seg.start, seg.end);
+          cells.push('<td class="' + cls + '" colspan="' + span + '" title="' + escapeHtml(titleText) + '">' +
+            '<div class="main">' + escapeHtml(label) + '</div>' +
+            '<div class="sub">' + escapeHtml(minutes + '분') + '</div>' +
+          '</td>');
+        }
+        idx += span;
+      }
+      return '<tr>' +
+        '<th class="sheet-sticky sheet-worker-col"><div class="sheet-worker-name">' + escapeHtml(worker._sheetLabel || workerHeaderName(worker)) + '</div><div class="sheet-worker-meta">' + escapeHtml((worker.group || '') + ' · ' + String(worker.hours || '') + 'h') + '</div></th>' +
+        cells.join('') +
+      '</tr>';
+    }).join('');
+
+    return '<div class="sheet-card">' +
+      '<div class="sheet-head"><div class="sheet-title">' + escapeHtml(title || '엑셀형 시간표') + '</div><div class="sheet-note">행=출근자 · 열=30분 단위</div></div>' +
+      '<div class="sheet-wrap">' +
+        '<table class="sheet-table sheet-compact">' +
+          '<thead><tr><th class="sheet-sticky sheet-worker-col">출근자</th>' + headTimes + '</tr></thead>' +
+          '<tbody>' + bodyRows + '</tbody>' +
+        '</table>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderCalendarView(result) {
+    const mount = document.getElementById('calendarResult');
+    if (!mount) return;
+    if (!result || !result.workers || !result.workers.length) {
+      mount.innerHTML = '';
+      return;
+    }
+
+    mount.innerHTML = buildCalendarMarkup(result, '출근시간별 위치', '');
+  }
+
+
+
+  function renderSimpleResult(result) {
+    const mount = document.getElementById('simpleResult');
+    if (!mount) return;
+    if (!result || !result.workers || !result.workers.length) {
+      mount.innerHTML = '';
+      return;
+    }
+    mount.innerHTML = '<div class="sheet-chip-row">' +
+      '<span class="sheet-chip">엘베=2F 엘베</span>' +
+      '<span class="sheet-chip">출차=2F 출차</span>' +
+      '<span class="sheet-chip">보조=2F 보조</span>' +
+      '<span class="sheet-chip">2F카트=2F 카트 내림</span>' +
+      '<span class="sheet-chip">3F카트=3F 카트 내림</span>' +
+      '<span class="sheet-chip">식사=1시간</span>' +
+      '<span class="sheet-chip">회의=안전회의</span>' +
+    '</div>';
+  }
+
+
+  function renderMobileResult(result) {
+    const mount = document.getElementById('mobileResult');
+    if (!mount) return;
+    if (!result || !result.workers || !result.workers.length) {
+      mount.innerHTML = '';
+      return;
+    }
+
+    mount.innerHTML = result.workers.map((w, idx) => {
+      const blocks = buildMergedBlocks(w);
+      const timelineRows = blocks.map(b => {
+        const cls = segmentClass(b.type, b.label);
+        const v = getTypeVisual(b.type);
+        const shortLabel = b.type === 'work' ? shortWorkLabel(b.label || '-') : (b.label || v.name);
+        return '<div class="mobile-row mobile-block">' +
+          '<div class="t">' + escapeHtml(fmtRange(b.start, b.end)) + '</div>' +
+          '<div class="v ' + cls + '">' +
+            '<div class="line0">' + renderTypeBadge(b.type, b.label) + '</div>' +
+            '<div class="line1">' + escapeHtml(shortLabel) + '</div>' +
+            '<div class="line2">' + escapeHtml(b.minutes + '분') + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      const warningsHtml = (w.warnings && w.warnings.length)
+        ? '<div class="mobile-warns">' + w.warnings.slice(0, 3).map(x => '<span>' + escapeHtml(x) + '</span>').join('') + (w.warnings.length > 3 ? '<span>외 ' + (w.warnings.length - 3) + '개</span>' : '') + '</div>'
+        : '';
+
+      return '<details class="mobile-worker-card" ' + (idx < 2 ? 'open' : '') + '>' +
+        '<summary class="top">' +
+          '<div>' +
+            '<div class="name">' + escapeHtml(w.name) + '</div>' +
+            '<div class="meta">' + escapeHtml(w.startTime) + ' · ' + escapeHtml(w.hours) + '시간 · ' + escapeHtml(w.group || '') + '</div>' +
+          '</div>' +
+          '<div class="summary-tags"><span class="tag">상세</span><span class="chev">▾</span></div>' +
+        '</summary>' +
+        warningsHtml +
+        '<div class="mobile-timeline">' + timelineRows + '</div>' +
+      '</details>';
+    }).join('');
+  }
+
+  function renderSlotHealth(result) {
+    const rows = (result.coverageSummary && result.coverageSummary.by15 ? result.coverageSummary.by15 : []).slice(0, 9999);
+    if (!rows.length) return '';
+    const head = rows.slice(0, 12).map(r => {
+      const bad = !r.ok;
+      return '<div class="slot-item ' + (bad ? 'bad' : '') + '">' +
+        '<div class="time">' + escapeHtml(r.time) + '</div>' +
+        '<div>2F ' + (r.elvMin + r.outMin) + '명</div>' +
+        '<div>3F ' + r.f3Min + '~' + r.f3Max + '</div>' +
+        '<div>3F카트 ' + (r.f3CartMin || 0) + '~' + (r.f3CartMax || 0) + '</div>' +
+        '<div>보조 ' + r.assistMin + '~' + r.assistMax + '</div>' +
+        '<div>2F카트 ' + r.cartMin + '~' + r.cartMax + '</div>' +
+      '</div>';
+    }).join('');
+    return '<details class="fold-panel inline-fold"><summary>시간대별 인원 체크 (일부)</summary><div class="slot-health"><div class="slot-grid">' + head + '</div></div></details>';
+  }
+
+  function renderResult(table, summaryEl, result) {
+    const workers = result.workers || [];
+    const timeline = result.timeline || [];
+    const groupCounts = result.groupCounts || {};
+    const globalWarnings = result.globalWarnings || [];
+
+    if (table) {
+      const thead = table.querySelector('thead');
+      const tbody = table.querySelector('tbody');
+      const rows = reducedTimeline(timeline);
+      if (thead && tbody) {
+        thead.innerHTML = '<tr><th class="time-col">시간</th>' + workers.map(function(w) {
+          return '<th>' + escapeHtml(workerHeaderName(w)) + '</th>';
+        }).join('') + '</tr>';
+
+        tbody.innerHTML = rows.map(function(row, rowIdx) {
+          const cells = workers.map(function(w) {
+            const seg = row.cells[w.id];
+            if (!seg) return '<td class="cell-empty"></td>';
+            const prevRow = rowIdx > 0 ? rows[rowIdx - 1] : null;
+            const prevSeg = prevRow ? prevRow.cells[w.id] : null;
+            const isCont = prevSeg && seg && prevSeg.type === seg.type && prevSeg.label === seg.label;
+            const html = isCont ? '' : renderDesktopCellLabel(seg);
+            const contClass = isCont ? ' cell-cont' : '';
+            return '<td class="' + segmentClass(seg.type, seg.label) + contClass + '">' + html + '</td>';
+          }).join('');
+          return '<tr><td class="time-col">' + escapeHtml(row.time) + '</td>' + cells + '</tr>';
+        }).join('');
+      }
+    }
+
+    summaryEl.innerHTML =
+      '<div><strong>총 ' + workers.length + '명</strong> · 오픈조 ' + (groupCounts['오픈조'] || 0) + ' · 중간조 ' + (groupCounts['중간조'] || 0) + ' · 마감조 ' + (groupCounts['마감조'] || 0) + '</div>' +
+      '<div class="counts">' +
+        '<span class="pill">출근시간별 위치</span>' +
+        '<span class="pill">모든 근무시간은 근무지 배정 보장 · 한 근무지 최대 60분 · 2F 엘베·2F 출차·3F는 60분 고정 · 보조·2F카트·3F카트가 잔여 시간을 흡수</span>' +
+        '<span class="pill">식사 1시간</span>' +
+      '</div>' +
+      (globalWarnings.length ? '<div class="warn">' + globalWarnings.map(function(w) { return escapeHtml(w); }).join('<br>') + '</div>' : '');
+
+    renderCalendarView(result);
+    renderSimpleResult(result);
+    renderMobileResult(result);
+  }
+
+  function csvEscape(v) {
+    return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  }
+
+  function isAndroidBrowser() {
+    return /Android/i.test(navigator.userAgent || '');
+  }
+
+  function saveBlobCompat(filename, blob, mimeType, fallbackText) {
+    const nav = navigator;
+    if (isAndroidBrowser() && nav && typeof nav.share === 'function' && typeof File === 'function') {
+      try {
+        const file = new File([blob], filename, { type: mimeType || blob.type || 'application/octet-stream' });
+        if (!nav.canShare || nav.canShare({ files: [file] })) {
+          return nav.share({ files: [file], title: filename }).catch(function() {
+            return false;
+          });
+        }
+      } catch (e) {}
+    }
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function() {
+        URL.revokeObjectURL(url);
+        if (a.parentNode) a.parentNode.removeChild(a);
+      }, 250);
+      return Promise.resolve(true);
+    } catch (e) {
+      try {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
+        return Promise.resolve(true);
+      } catch (e2) {
+        if (fallbackText && nav && nav.clipboard && nav.clipboard.writeText) {
+          return nav.clipboard.writeText(fallbackText).then(function() {
+            alert('다운로드 대신 텍스트를 복사했습니다. 붙여넣어 저장하세요.');
+            return true;
+          }).catch(function() {
+            alert('저장에 실패했습니다. 다른 브라우저에서 다시 시도하세요.');
+            return false;
+          });
+        }
+        alert('저장에 실패했습니다. 다른 브라우저에서 다시 시도하세요.');
+        return Promise.resolve(false);
+      }
+    }
+  }
+
+  function downloadCsv(result) {
+    if (!result || !result.timeline) return;
+    const workers = result.workers || [];
+    const timeline = result.timeline || [];
+    const rows = [];
+    rows.push(['시간'].concat(workers.map(w => w.name + '(' + w.startTime + '/' + w.hours + 'h)')));
+    for (const r of timeline) {
+      rows.push([r.time].concat(workers.map(w => (r.cells[w.id] && r.cells[w.id].label) ? r.cells[w.id].label : '')));
+    }
+    const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    return saveBlobCompat('schedule.csv', blob, 'text/csv;charset=utf-8;', csv);
+  }
+
+
+  function renderDayWorkerDetail(day) {
+    const schedule = day && day.detailSchedule ? day.detailSchedule : null;
+    const workers = schedule && Array.isArray(schedule.workers) ? schedule.workers : [];
+    if (!workers.length) {
+      return '<div class="muted small">상세 스케줄이 없습니다.</div>';
+    }
+    const calendarHtml = buildCalendarMarkup(schedule, '출근시간별 위치', '');
+    return '<div class="day-detail-body">' + calendarHtml + '</div>';
+  }
+
+  function renderWeekDayDetails(week) {
+    const cards = week.days.map(function(day) {
+      return '<details class="day-detail-card">' +
+        '<summary><span>' + escapeHtml(day.dateStr + ' (' + day.dayName + ')') + '</span><span class="sum-right">' + escapeHtml(String(day.count)) + '명</span></summary>' +
+        renderDayWorkerDetail(day) +
+      '</details>';
+    }).join('');
+    return '<div class="day-detail-grid">' + cards + '</div>';
+  }
+
+
+  function renderClosing4Week(rootEl, summaryEl, data) {
+    if (!rootEl || !summaryEl) return;
+    if (!data || !data.weeks) {
+      rootEl.innerHTML = '';
+      summaryEl.innerHTML = '';
+      return;
+    }
+
+    function groupMap(day) {
+      const map = {};
+      (day.groups || []).forEach(function(g) { map[g.name] = g; });
+      return map;
+    }
+
+    function renderWeekSheet(week) {
+      const head = week.days.map(function(day) {
+        return '<th class="sheet-day-col"><div class="sheet-worker-name">' + escapeHtml(day.dayName + ' ' + day.dateStr.slice(5)) + '</div><div class="sheet-worker-meta">총 ' + escapeHtml(String(day.count)) + '명</div></th>';
+      }).join('');
+
+      const rows = ['오픈조', '중간조', '마감조'].map(function(groupName) {
+        const cells = week.days.map(function(day) {
+          const g = groupMap(day)[groupName];
+          if (!g) return '<td class="sheet-empty">-</td>';
+          return '<td class="sheet-cell ' + (groupName === '오픈조' ? 'cell-work' : (groupName === '중간조' ? 'cell-break' : 'cell-meal')) + '">' +
+            '<div class="main">' + escapeHtml(String(g.count)) + '명</div>' +
+            '<div class="sub">출근 ' + escapeHtml(g.startTime || '-') + '</div>' +
+            '<div class="sub">식사 ' + escapeHtml(g.mealTime || '-') + '</div>' +
+          '</td>';
+        }).join('');
+        return '<tr><th class="sheet-sticky sheet-worker-col">' + escapeHtml(groupName) + '</th>' + cells + '</tr>';
+      }).join('');
+
+      return '<div class="sheet-wrap">' +
+        '<table class="sheet-table">' +
+          '<thead><tr><th class="sheet-sticky sheet-worker-col">조</th>' + head + '</tr></thead>' +
+          '<tbody>' + rows + '</tbody>' +
+        '</table>' +
+      '</div>';
+    }
+
+    function renderWeekDaySheets(week) {
+      return '<details class="sheet-collapse"><summary>날짜별 엑셀형 위치표</summary><div class="sheet-day-stack">' +
+        week.days.map(function(day) {
+          const markup = buildCalendarMarkup(day.detailSchedule, day.dateStr + ' (' + day.dayName + ')', '');
+          return '<div class="sheet-day-box"><div class="sheet-day-head">' + escapeHtml(day.dateStr + ' (' + day.dayName + ')') + '</div>' + markup + '</div>';
+        }).join('') +
+      '</div></details>';
+    }
+
+    rootEl.innerHTML = data.weeks.map(function(week) {
+      return '<div class="sheet-week-card">' +
+        '<div class="sheet-week-title">' + escapeHtml(week.weekIndex + '주차') + '</div>' +
+        '<div class="sheet-week-sub">행=조 · 열=요일</div>' +
+        '<div class="sheet-week-detail">' + renderWeekSheet(week) + '</div>' +
+        renderWeekDaySheets(week) +
+      '</div>';
+    }).join('');
+
+    summaryEl.innerHTML = '<div><strong>시작 주차 월요일:</strong> ' + escapeHtml(data.startDate) + '</div>' +
+      '<div class="counts">' +
+      '<span class="pill">오픈조 매일 2명</span>' +
+      '<span class="pill">중간조 요일별 개별시간</span>' +
+      '<span class="pill">마감조 요일별 인원</span>' +
+      '</div>' +
+      (data.warnings && data.warnings.length ? '<div class="warn">' + data.warnings.map(escapeHtml).join('<br>') + '</div>' : '');
+  }
+
+
+  function downloadClosingCsv(data) {
+    if (!data || !data.weeks) return;
+    const rows = [['주차', '날짜', '요일', '조', '인원', '출근시간', '식사시간', '슬롯']];
+    data.weeks.forEach(function(week) {
+      week.days.forEach(function(day) {
+        day.groups.forEach(function(group) {
+          rows.push([week.weekIndex + '주차', day.dateStr, day.dayName, group.name, group.count, group.startTime, group.mealTime, group.slots.join(' / ')]);
+        });
+      });
+    });
+    const csv = rows.map(function(r) { return r.map(csvEscape).join(','); }).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    return saveBlobCompat('all_shifts_4weeks.csv', blob, 'text/csv;charset=utf-8;', csv);
+  }
+
+  return { initStartOptions, renderWorkerList, renderResult, downloadCsv, renderClosing4Week, downloadClosingCsv };
+})();
+
+
+(() => {
+  let __booted = false;
+  function boot() {
+    if (__booted) return;
+    __booted = true;
+    document.body.classList.toggle('is-android', /Android/i.test(navigator.userAgent || ''));
+    const { generateSchedule, generateClosing4WeekTable } = window.Scheduler;
+    const { initStartOptions, renderWorkerList, renderResult, downloadCsv, renderClosing4Week, downloadClosingCsv } = window.UI;
+    const { generateId } = window.Utils;
+
+    const els = {
+      workerName: document.getElementById('workerName'),
+      workerStart: document.getElementById('workerStart'),
+      workerHours: document.getElementById('workerHours'),
+      addWorkerBtn: document.getElementById('addWorkerBtn'),
+      workerList: document.getElementById('workerList'),
+      demoBtn: document.getElementById('demoBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      generateBtn: document.getElementById('generateBtn'),
+      resultTable: document.getElementById('resultTable'),
+      summary: document.getElementById('summary'),
+      downloadCsvBtn: document.getElementById('downloadCsvBtn'),
+      mobileResult: document.getElementById('mobileResult'),
+      errorBox: document.getElementById('errorBox'),
+      fourWeekStartDate: document.getElementById('fourWeekStartDate'),
+      generateClosing4WeekBtn: document.getElementById('generateClosing4WeekBtn'),
+      useTodayWeekBtn: document.getElementById('useTodayWeekBtn'),
+      closing4Summary: document.getElementById('closing4Summary'),
+      closing4Week: document.getElementById('closing4Week'),
+      downloadClosingCsvBtn: document.getElementById('downloadClosingCsvBtn'),
+      middleCountInputs: Array.prototype.slice.call(document.querySelectorAll('[data-middle-count]')),
+      middleTimeContainers: Array.prototype.slice.call(document.querySelectorAll('[data-middle-times-container]'))
+    };
+
+    function showError(msg, err) {
+      console.error(err || msg);
+      if (els.errorBox) {
+        els.errorBox.textContent = msg;
+        els.errorBox.style.display = 'block';
+      }
+      try { if (!/iP(ad|hone|od)/i.test(navigator.userAgent || '')) alert(msg); } catch (_) {}
+    }
+    function clearError() {
+      if (els.errorBox) {
+        els.errorBox.textContent = '';
+        els.errorBox.style.display = 'none';
+      }
+    }
+
+    function requireElement(key, label) {
+      if (!els[key]) throw new Error(label + ' 버튼/영역을 찾지 못했습니다. 파일이 손상되었을 수 있습니다.');
+      return els[key];
+    }
+
+    function safeBindButton(el, handler) {
+      if (!el) return;
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        try {
+          handler(e);
+        } catch (err) {
+          showError('버튼 실행 중 오류가 발생했습니다: ' + (err && err.message ? err.message : err), err);
+        }
+      }, { passive: false });
+    }
+
+    let workers = [];
+    let currentResult = null;
+
+    requireElement('workerName', '이름 입력');
+    requireElement('workerStart', '출근시간 선택');
+    requireElement('workerHours', '근무시간 선택');
+    requireElement('addWorkerBtn', '추가');
+    requireElement('workerList', '근무자 목록');
+    requireElement('demoBtn', '샘플 인원');
+    requireElement('clearBtn', '전체 삭제');
+    requireElement('generateBtn', '스케줄 생성');
+    requireElement('downloadCsvBtn', 'CSV');
+
+    initStartOptions(els.workerStart);
+    els.workerStart.value = '08:30';
+
+    function defaultMiddleConfig() {
+      return {
+        1: { times: ['10:30'] },
+        2: { times: ['10:30'] },
+        3: { times: ['10:30'] },
+        4: { times: ['10:30'] },
+        5: { times: ['12:30'] },
+        6: { times: ['10:30'] },
+        0: { times: ['10:30'] }
+      };
+    }
+
+    function getMiddleCountInput(day) {
+      return document.querySelector('[data-middle-count][data-middle-day="' + day + '"]');
+    }
+
+    function getMiddleTimeContainer(day) {
+      return document.querySelector('[data-middle-times-container="' + day + '"]');
+    }
+
+    function readMiddleTimesFromDom(day) {
+      const container = getMiddleTimeContainer(day);
+      if (!container) return [];
+      return Array.prototype.slice.call(container.querySelectorAll('select[data-middle-time]')).map(function(select) {
+        return select.value || '10:30';
+      });
+    }
+
+    function renderMiddleTimeControls(day, values) {
+      const container = getMiddleTimeContainer(day);
+      const countInput = getMiddleCountInput(day);
+      if (!container || !countInput) return;
+      const count = Math.max(1, Math.min(10, Math.round(Number(countInput.value) || 1)));
+      countInput.value = String(count);
+      const current = Array.isArray(values) && values.length ? values.slice() : readMiddleTimesFromDom(day);
+      container.innerHTML = '';
+      for (let i = 0; i < count; i++) {
+        const row = document.createElement('div');
+        row.className = 'middle-time-item';
+        const label = document.createElement('div');
+        label.className = 'slot-label';
+        label.textContent = '중간' + (i + 1);
+        const select = document.createElement('select');
+        select.setAttribute('data-middle-time', '1');
+        select.setAttribute('data-middle-day', String(day));
+        select.setAttribute('data-middle-index', String(i));
+        initStartOptions(select);
+        select.value = current[i] || current[current.length - 1] || '10:30';
+        row.appendChild(label);
+        row.appendChild(select);
+        container.appendChild(row);
+      }
+    }
+
+    function initMiddleConfigControls() {
+      const defaults = defaultMiddleConfig();
+      [1, 2, 3, 4, 5, 6, 0].forEach(function(day) {
+        const countInput = getMiddleCountInput(day);
+        if (countInput) countInput.value = String((defaults[day] && defaults[day].times ? defaults[day].times.length : 1));
+        renderMiddleTimeControls(day, defaults[day] ? defaults[day].times : ['10:30']);
+      });
+      els.middleCountInputs.forEach(function(input) {
+        input.addEventListener('change', function() {
+          const day = input.getAttribute('data-middle-day');
+          renderMiddleTimeControls(day, readMiddleTimesFromDom(day));
+        });
+        input.addEventListener('input', function() {
+          const day = input.getAttribute('data-middle-day');
+          renderMiddleTimeControls(day, readMiddleTimesFromDom(day));
+        });
+      });
+    }
+
+    function readMiddleConfig() {
+      const cfg = defaultMiddleConfig();
+      [1, 2, 3, 4, 5, 6, 0].forEach(function(day) {
+        const times = readMiddleTimesFromDom(day).filter(function(v) { return !!v; });
+        cfg[day] = { times: times.length ? times : (cfg[day] ? cfg[day].times.slice() : ['10:30']) };
+      });
+      return cfg;
+    }
+
+    initMiddleConfigControls();
+
+    function fmtInputDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + d;
+    }
+
+    function mondayOf(date) {
+      const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const day = d.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      d.setDate(d.getDate() + diff);
+      return d;
+    }
+
+    let currentClosing4Week = null;
+    if (els.fourWeekStartDate) els.fourWeekStartDate.value = fmtInputDate(mondayOf(new Date()));
+
+    function refreshWorkers() {
+      renderWorkerList(els.workerList, workers, (id) => {
+        workers = workers.filter(w => w.id !== id);
+        refreshWorkers();
+      });
+      els.generateBtn.disabled = workers.length === 0;
+    }
+
+    function addWorker(name, startTime, hours) {
+      if (workers.length >= 40) {
+        showError('최대 40명까지 등록 가능합니다.');
+        return;
+      }
+      workers.push({ id: generateId(), name, startTime, hours: Number(hours) });
+      refreshWorkers();
+    }
+
+    function clearResults() {
+      currentResult = null;
+      if (els.summary) els.summary.innerHTML = '';
+      if (els.resultTable) {
+        const thead = els.resultTable.querySelector('thead');
+        const tbody = els.resultTable.querySelector('tbody');
+        if (thead) thead.innerHTML = '';
+        if (tbody) tbody.innerHTML = '';
+      }
+      const cal = document.getElementById('calendarResult');
+      const simple = document.getElementById('simpleResult');
+      if (cal) cal.innerHTML = '';
+      if (simple) simple.innerHTML = '';
+      if (els.mobileResult) els.mobileResult.innerHTML = '';
+    }
+
+    safeBindButton(els.addWorkerBtn, function() {
+      clearError();
+      const name = (els.workerName.value || '').trim();
+      if (!name) {
+        showError('이름을 입력하세요.');
+        return;
+      }
+      addWorker(name, els.workerStart.value, els.workerHours.value);
+      els.workerName.value = '';
+      els.workerName.focus();
+    });
+
+    [els.workerName, els.workerStart, els.workerHours].forEach(function(inputEl) {
+      if (!inputEl) return;
+      inputEl.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (els.addWorkerBtn) els.addWorkerBtn.click();
+        }
+      });
+    });
+
+    safeBindButton(els.demoBtn, function() {
+      clearError();
+      workers = [];
+      const demo = [
+        ['오픈1', '08:30', 8], ['오픈2', '08:30', 8],
+        ['중간1', '09:15', 8], ['중간2', '10:00', 6], ['중간3', '10:45', 8],
+        ['중간4', '11:30', 6], ['중간5', '12:15', 8],
+        ['마감1', '13:30', 8], ['마감2', '13:30', 8], ['마감3', '13:50', 8], ['마감4', '13:50', 6]
+      ];
+      for (const d of demo) addWorker(d[0], d[1], d[2]);
+    });
+
+    safeBindButton(els.clearBtn, function() {
+      clearError();
+      workers = [];
+      refreshWorkers();
+      clearResults();
+    });
+
+    safeBindButton(els.generateBtn, function() {
+      clearError();
+      try {
+        if (!workers.length) {
+          showError('근무자를 먼저 등록하세요.');
+          return;
+        }
+        els.generateBtn.disabled = true;
+        els.generateBtn.textContent = '생성중...';
+        currentResult = generateSchedule(workers);
+        renderResult(els.resultTable, els.summary, currentResult);
+      } catch (e) {
+        showError('스케줄 생성 중 오류가 발생했습니다: ' + (e && e.message ? e.message : e), e);
+      } finally {
+        els.generateBtn.disabled = workers.length === 0;
+        els.generateBtn.textContent = '스케줄 생성';
+      }
+    });
+
+    safeBindButton(els.downloadCsvBtn, function() {
+      clearError();
+      try {
+        if (!currentResult) {
+          showError('먼저 스케줄을 생성하세요.');
+          return;
+        }
+        downloadCsv(currentResult);
+      } catch (e) {
+        showError('CSV 다운로드 중 오류가 발생했습니다: ' + (e && e.message ? e.message : e), e);
+      }
+    });
+
+
+    if (els.generateClosing4WeekBtn) {
+      safeBindButton(els.generateClosing4WeekBtn, function() {
+        clearError();
+        try {
+          currentClosing4Week = generateClosing4WeekTable(els.fourWeekStartDate ? els.fourWeekStartDate.value : '', readMiddleConfig());
+          renderClosing4Week(els.closing4Week, els.closing4Summary, currentClosing4Week);
+        } catch (e) {
+          showError('4주 표 생성 중 오류가 발생했습니다: ' + (e && e.message ? e.message : e), e);
+        }
+      });
+    }
+
+    if (els.useTodayWeekBtn) {
+      safeBindButton(els.useTodayWeekBtn, function() {
+        clearError();
+        try {
+          if (els.fourWeekStartDate) els.fourWeekStartDate.value = fmtInputDate(mondayOf(new Date()));
+          currentClosing4Week = generateClosing4WeekTable(els.fourWeekStartDate ? els.fourWeekStartDate.value : '', readMiddleConfig());
+          renderClosing4Week(els.closing4Week, els.closing4Summary, currentClosing4Week);
+        } catch (e) {
+          showError('이번 주 기준 표 생성 중 오류가 발생했습니다: ' + (e && e.message ? e.message : e), e);
+        }
+      });
+    }
+
+    if (els.downloadClosingCsvBtn) {
+      safeBindButton(els.downloadClosingCsvBtn, function() {
+        clearError();
+        try {
+          if (!currentClosing4Week) {
+            currentClosing4Week = generateClosing4WeekTable(els.fourWeekStartDate ? els.fourWeekStartDate.value : '', readMiddleConfig());
+            renderClosing4Week(els.closing4Week, els.closing4Summary, currentClosing4Week);
+          }
+          downloadClosingCsv(currentClosing4Week);
+        } catch (e) {
+          showError('4주 CSV 다운로드 중 오류가 발생했습니다: ' + (e && e.message ? e.message : e), e);
+        }
+      });
+    }
+
+    refreshWorkers();
+    clearResults();
+    try {
+      currentClosing4Week = generateClosing4WeekTable(els.fourWeekStartDate ? els.fourWeekStartDate.value : "", readMiddleConfig());
+      renderClosing4Week(els.closing4Week, els.closing4Summary, currentClosing4Week);
+    } catch (bootErr) {
+      if (els.errorBox) {
+        els.errorBox.textContent = '초기 4주 표 생성은 건너뛰었습니다. 버튼으로 다시 생성하면 됩니다. ' + (bootErr && bootErr.message ? bootErr.message : bootErr);
+        els.errorBox.style.display = 'block';
+      }
+      currentClosing4Week = null;
+    }
+  }
+
+  window.addEventListener('error', (e) => {
+    const box = document.getElementById('errorBox');
+    if (box) {
+      box.textContent = '오류: ' + (e.message || '알 수 없는 오류');
+      box.style.display = 'block';
+    }
+  });
+
+  window.addEventListener('unhandledrejection', function(e) {
+    const box = document.getElementById('errorBox');
+    if (box) {
+      box.textContent = '오류: ' + ((e.reason && e.reason.message) || String(e.reason || '알 수 없는 오류'));
+      box.style.display = 'block';
+    }
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+    window.addEventListener('load', boot);
+  } else {
+    boot();
+  }
+})();
+
+  </script>
+</body>
+</html>
