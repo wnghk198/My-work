@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>근무 스케줄러</title>
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="application-name" content="근무 스케줄러" />
+  <meta name="apple-mobile-web-app-title" content="근무 스케줄러" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="format-detection" content="telephone=no" />
+    
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
+  <link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>근무 스케줄링 프로그램</h1>
+      <p>단일 HTML 파일 버전 v48 · Windows / iOS / Android 브라우저용</p>
+      <div class="notice-inline">GitHub Pages 업로드 후 iPhone Safari에서 열고 <strong>공유 → 홈 화면에 추가</strong>로 설치할 수 있습니다. · 오픈조·중간조·마감조는 매일 모두 운영 · 오픈조 2명(08:30) · 중간조는 요일별 인원 및 각 인원별 출근시간 설정 · 마감조 월~금 4명, 토 6명, 일 5명 · 월~목 13:30 / 금~일 13:50 · 마감조 식사 17:00 · 전 근무자 첫 근무지는 카트 제외 · 마감조 첫 근무지는 엘베/출차/3F 균등 우선 · 3F 최대 6명 · 2F 보조 추가</div>
+    </header>
+
+    <section class="card">
+      <h2>근무자 등록 (최대 40명)</h2>
+      <div id="errorBox" class="error-box" style="display:none"></div>
+      <noscript><div class="error-box" style="display:block">이 파일은 JavaScript가 실행되어야 작동합니다. iPhone에서는 <b>파일 앱 미리보기</b>가 아니라 <b>Safari에서 웹페이지로 연 상태</b>여야 버튼이 작동합니다.</div></noscript>
+      <div id="androidTip" class="android-tip">안드로이드에서는 CSV 버튼을 누르면 다운로드 또는 공유 시트가 열릴 수 있습니다. 표는 좌우 스크롤로 확인하세요.</div>
+      <div class="form-grid">
+        <input id="workerName" placeholder="이름" />
+        <select id="workerStart"></select>
+        <select id="workerHours">
+          <option value="6">6시간 근무</option>
+          <option value="8" selected>8시간 근무</option>
+        </select>
+        <button type="button" id="addWorkerBtn">추가</button>
+      </div>
+      <div class="muted small">시작 시간은 08:30 이후 15분 단위</div>
+      <div class="worker-list" id="workerList"></div>
+      <div class="action-grid mt8">
+        <button type="button" id="demoBtn" class="secondary">샘플 인원</button>
+        <button type="button" id="clearBtn" class="secondary">전체 삭제</button>
+        <button type="button" id="generateBtn" class="wide">스케줄 생성</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>핵심 규칙</h2>
+      <div class="summary">
+        <div class="counts">
+          <span class="pill">한 근무지 최대 60분 · 엘베·출차·3F·보조는 가능하면 60분 최우선 · 카트 30분 우선</span>
+          <span class="pill">식사 1시간</span>
+          <span class="pill">휴식 15분×2 · 10분×1</span>
+          <span class="pill">안전회의 1회</span>
+          <span class="pill">2F 엘베 · 2F 출차 · 3F · 2F 보조 · 카트</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="result-head">
+        <h2>핵심 스케줄</h2>
+        <button type="button" id="downloadCsvBtn" class="secondary">CSV</button>
+      </div>
+      <div id="summary" class="summary"></div>
+      <div id="calendarResult" class="calendar-result"></div>
+      <div id="simpleResult" class="simple-result"></div>
+
+      <details class="fold-panel mobile-detail-panel">
+        <summary>근무자별 상세 타임라인 보기</summary>
+        <div class="mobile-toolbar muted small">모바일에서는 근무자 카드를 눌러 타임라인을 펼치세요.</div>
+        <div id="mobileResult" class="mobile-result"></div>
+      </details>
+
+      <details class="fold-panel desktop-detail-panel">
+        <summary>상세 시간표 보기 (15분 축약)</summary>
+        <div class="table-wrap" id="desktopTableWrap">
+        <div class="scroll-hint muted small">좌우로 밀어서 표 보기</div>
+        <table id="resultTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+        </div>
+      </details>
+    </section>
+
+    <section class="card">
+      <div class="result-head">
+        <h2>4주 운영 캘린더</h2>
+        <button type="button" id="downloadClosingCsvBtn" class="secondary">4주 CSV</button>
+      </div>
+      <div class="fourweek-toolbar">
+        <input id="fourWeekStartDate" type="date" class="wide-span" />
+        <button type="button" id="generateClosing4WeekBtn" class="secondary">4주 표 생성</button>
+        <button type="button" id="useTodayWeekBtn" class="secondary">이번 주 기준</button>
+      </div>
+      <div class="muted small fourweek-note">오픈·중간·마감조를 4주 캘린더와 날짜별 위치표로 표시</div>
+      <div class="middle-config-box">
+        <div class="middle-config-title">중간조 요일별 설정</div>
+        <div class="middle-config-grid">
+          <div class="middle-config-row" data-day="1"><div class="middle-config-head"><div class="day">월요일</div><div class="field"><label for="middleCount1">인원</label><input id="middleCount1" data-middle-day="1" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="1"></div></div>
+          <div class="middle-config-row" data-day="2"><div class="middle-config-head"><div class="day">화요일</div><div class="field"><label for="middleCount2">인원</label><input id="middleCount2" data-middle-day="2" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="2"></div></div>
+          <div class="middle-config-row" data-day="3"><div class="middle-config-head"><div class="day">수요일</div><div class="field"><label for="middleCount3">인원</label><input id="middleCount3" data-middle-day="3" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="3"></div></div>
+          <div class="middle-config-row" data-day="4"><div class="middle-config-head"><div class="day">목요일</div><div class="field"><label for="middleCount4">인원</label><input id="middleCount4" data-middle-day="4" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="4"></div></div>
+          <div class="middle-config-row" data-day="5"><div class="middle-config-head"><div class="day">금요일</div><div class="field"><label for="middleCount5">인원</label><input id="middleCount5" data-middle-day="5" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="5"></div></div>
+          <div class="middle-config-row" data-day="6"><div class="middle-config-head"><div class="day">토요일</div><div class="field"><label for="middleCount6">인원</label><input id="middleCount6" data-middle-day="6" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="6"></div></div>
+          <div class="middle-config-row" data-day="0"><div class="middle-config-head"><div class="day">일요일</div><div class="field"><label for="middleCount0">인원</label><input id="middleCount0" data-middle-day="0" data-middle-count type="number" min="1" max="10" value="1" /></div></div><div class="middle-time-list" data-middle-times-container="0"></div></div>
+        </div>
+        <div class="middle-config-help">중간조는 매일 생성되며, 요일별로 인원 수와 <strong>각 인원별 출근 시간</strong>을 따로 둘 수 있습니다. 식사는 각 인원 기준으로 <strong>출근 후 3시간~3시간 30분</strong> 창으로 안내합니다.</div>
+      </div>
+      <div id="closing4Summary" class="summary"></div>
+      <div id="closing4Week" class="fourweek-wrap"></div>
+    </section>
+
+  </div>
+      <script src="assets/js/pwa.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
